@@ -13,6 +13,7 @@
 #include "SPI.h"
 #include "SPI_NAND.h"
 #include "Memory_operations.h"
+#include "as7341.h"
 
 NAND_info data;
 //void write_packet(uint8_t sample, RTC_TimeTypeDef sTime, uint8_t *magnetometer, uint8_t *pressure, uint8_t *temp, uint8_t *gyroscope,uint8_t *accelerometer, uint8_t *gyroscope2,uint8_t *accelerometer2,uint8_t *ppg_sample, uint8_t *NAND_packet);
@@ -70,37 +71,23 @@ void erase_good_blocks(uint8_t *bad_blocks){
 	}
 }
 
-void write_packet(uint16_t sample, Time_Struct timestamp, uint8_t *gyroscope, uint8_t *accelerometer, uint8_t *NAND_packet){
-
-	NAND_packet[0 + (sample * BYTES_PER_SAMPLE)] = timestamp.hh;
-	NAND_packet[1 + (sample * BYTES_PER_SAMPLE)] = timestamp.mm;
-	NAND_packet[2 + (sample * BYTES_PER_SAMPLE)] = timestamp.ss;
-
-	uint16_t milli = timestamp.sss;
-	uint8_t m[2];
-	m[0] = milli & 0xff;
-	m[1] = milli >> 8;
-
-	NAND_packet[3 + (sample * BYTES_PER_SAMPLE)] = m[0];
-	NAND_packet[4 + (sample * BYTES_PER_SAMPLE)] = m[1];
-
-	NAND_packet[5 + (sample * BYTES_PER_SAMPLE)] = accelerometer[0];
-	NAND_packet[6 + (sample * BYTES_PER_SAMPLE)] = accelerometer[1];
-	NAND_packet[7 + (sample * BYTES_PER_SAMPLE)] = accelerometer[2];
-	NAND_packet[8 + (sample * BYTES_PER_SAMPLE)] = accelerometer[3];
-	NAND_packet[9 + (sample * BYTES_PER_SAMPLE)] = accelerometer[4];
-	NAND_packet[10 + (sample * BYTES_PER_SAMPLE)] = accelerometer[5];
-
-	NAND_packet[11 + (sample * BYTES_PER_SAMPLE)] = gyroscope[0];
-	NAND_packet[12 + (sample * BYTES_PER_SAMPLE)] = gyroscope[1];
-	NAND_packet[13 + (sample * BYTES_PER_SAMPLE)] = gyroscope[2];
-	NAND_packet[14 + (sample * BYTES_PER_SAMPLE)] = gyroscope[3];
-	NAND_packet[15 + (sample * BYTES_PER_SAMPLE)] = gyroscope[4];
-	NAND_packet[16 + (sample * BYTES_PER_SAMPLE)] = gyroscope[5];
-
+void write_packet(Time_Struct timestamp, AS7341_SpectralData_t *spec_data, int16_t *audio_buffer, uint8_t *NAND_packet){
+    // 1. Write the Time_Struct (5 bytes)
+    NAND_packet[0] = timestamp.hh;
+    NAND_packet[1] = timestamp.mm;
+    NAND_packet[2] = timestamp.ss;
+    NAND_packet[3] = timestamp.sss & 0xFF;         
+    NAND_packet[4] = (timestamp.sss >> 8) & 0xFF;  
+    
+    // 2. Write the Spectrometer Data (20 bytes)
+    // Copies f1..f8, clear, nir directly into the packet
+    memcpy(&NAND_packet[5], spec_data, sizeof(AS7341_SpectralData_t));
+    
+    // 3. Add 3 bytes of padding so the audio starts on an even boundary (Byte 28)
+    NAND_packet[25] = 0;
+    NAND_packet[26] = 0;
+    NAND_packet[27] = 0;
+    
+    // 4. Copy the audio data into the remaining 4068 bytes
+    memcpy(&NAND_packet[28], audio_buffer, BYTES_PER_SAMPLE - 28);
 }
-
-
-
-
-

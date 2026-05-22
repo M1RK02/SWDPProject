@@ -2,22 +2,19 @@
 /**
   ******************************************************************************
   * @file           : main.c
-  * @brief          : Main application file for MainBoard_IMU_Logger project.
+  * @brief          : Main application file for data_logger project.
   ******************************************************************************
-  * @functionality  : This firmware implements a complete Data Logger for the on board IMU.
+  * @functionality  : This firmware implements a complete Data Logger for the microphone and spectrometer.
   * @details        : The application operates using a State Machine triggered by a
-  * single USER BUTTON. It performs three primary tasks:
-  * 1. Real-time Acquisition: Reads Accelerometer/Gyroscope data
-  * via I2C, synchronized by a TIM2 interrupt.
-  * 2. Wireless Transmission: Sends data packets via Bluetooth Low Energy (BLE)
-  * using the UART interface.
-  * 3. Data Logging: Saves acquired data to NAND Flash memory.
+  * single USER BUTTON. It performs two primary tasks:
+  * 1. Real-time Acquisition: Reads microphone and spectrometer data
+  * 2. Data Logging: Saves acquired data to NAND Flash memory.
   *
   * Saved data can be downloaded via a USB Virtual COM Port (VCP)
   * connection, also initiated by the USER BUTTON.
   *
   * @intended_use   : Starting template for Smart Wearables Course
-  * exploring IMU interfacing, BLE communication, and memory management.
+  * exploring microphone interfaces, i2c commincation, and memory management.
   ******************************************************************************
   */
 /* USER CODE END Header */
@@ -35,7 +32,7 @@
 #include "led_driver.h"
 #include "imu_driver.h"
 #include "bluetooth.h"
-
+#include "as7341.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -85,12 +82,14 @@ static AppState current_state = STATE_IDLE;
 // Set to 1 when a USB connection is detected.
 uint8_t usb_flag = 0;
 
-// IMU data structures for accelerometer and gyroscope.
-static IMU_Data accelerometer_data;
-static IMU_Data gyroscope_data;
+// Spectrometer data structures
+AS7341_Handle_t h_as7341;
+AS7341_SpectralData_t spectral_data;
 
-uint8_t raw_accelerometer[6] = {0};
-uint8_t raw_gyroscope[6] = {0};
+// --- Buffer Audio DMA Circolare Hardware ---
+#define AUDIO_BLOCK_SIZE 2034
+#define AUDIO_BUF_SIZE   (AUDIO_BLOCK_SIZE * 2) 
+int16_t audio_buffer[AUDIO_BUF_SIZE];
 
 /// ----- NAND FLASH variables ----- ///
 
@@ -175,42 +174,18 @@ int main(void)
   MX_SPI3_Init();
   MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
-
-  // Turn the RED LED on to indicate the start of the initialization process
-  LED_On(LED_RED);
-
-  // Initialize all hardware peripherals (ble, usb, nand flash, imu)
-  BLE_Initialize();
+  // Inizializzazione USB
   MX_USB_Device_Init();
   HAL_Delay(1000);
 
   spi_nand_init();
   find_bad_blocks(bad_blocks); // find bad_blocks and save them
 
-  if(IMU_Init() == 1) {
-    // If IMU is successfully initialized, configure the sensors
-    // Configure Accelerometer: 52 Hz ODR, ±2g FS, High Performance
-    IMU_ConfigAccelerometer(ACC_ODR_52HZ, ACC_FS_2G, 1);
-    // Configure Gyroscope: 52 Hz ODR, 250 dps FS, High Performance
-    IMU_ConfigGyroscope(GYR_ODR_52HZ, GYR_FS_250DPS, 1);
-  } else {
-    // IMU initialization failed, blink red LED for 2 seconds
-	LED_Toggle(LED_RED);
-	HAL_Delay(500);
-	LED_Toggle(LED_RED);
-	HAL_Delay(500);
-	LED_Toggle(LED_RED);
-	HAL_Delay(500);
-	LED_Toggle(LED_RED);
-	HAL_Delay(500);
-	LED_Toggle(LED_RED);
-	HAL_Delay(500);
-	LED_Toggle(LED_RED);
-	HAL_Delay(500);
+  // Inizializzazione Spettrometro AS7341 sulla I2C3
+  if (AS7341_Init( & h_as7341, & hi2c3, 29, 599, AS7341_GAIN_32X) != AS7341_OK) {
+      LED_On(LED_RED);
+      Error_Handler();
   }
-
-  // Turn off the red LED to indicate that initialization is complete
-  LED_Off(LED_RED);
 
   /* USER CODE END 2 */
 
@@ -228,6 +203,8 @@ int main(void)
 	  switch(current_state)
 	  {
 	  	  case STATE_IDLE:
+            LED_Off(LED_RED);
+            LED_Off(LED_GREEN);
 	  		// Check if a USB connection has been detected
 	  		if(!usb_flag)
 		    {
@@ -243,14 +220,21 @@ int main(void)
 	  		break;
 
 	  	  case STATE_ACQUISITION:
-	  		   // All data acquisition is handled by the timer interrupt
-
+            LED_On(LED_RED);
+            LED_Off(LED_GREEN);
+            AS7341_ReadSpectral_NonBlocking(&h_as7341, &spectral_data);
+            // Microphone acquisition is handled by the DMA
 			break;
 
 	  	  case STATE_USB_CONNECTED:
+            LED_Off(LED_RED);
+            LED_On(LED_GREEN);
+            HAL_Delay(10);
 	  		break;
 
 	  	  case STATE_DOWNLOAD:
+            LED_On(LED_GREEN);
+            LED_On(LED_RED);
 
 	  		   // This state manages reading data blocks and sending them via USB.
 	  		  // Once download is complete, the state returns to USB_CONNECTED.
@@ -819,77 +803,31 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-/**
-  * @brief  Callback function for the timer period elapsed event.
-  * This function is triggered by a hardware timer at a fixed interval.
-  * @param  htim: Pointer to the timer handle.
-  */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-	if(htim == &htim2){
-
-        // Read sensor data from the IMU
-        IMU_ReadAccelerometerData(&accelerometer_data, raw_accelerometer);
-        IMU_ReadGyroscopeData(&gyroscope_data, raw_gyroscope);
-
-        // Send the accelerometer and gyroscope data via BLE
-        // We are sending only the X-axis data
-        BLE_SendPacket(DATA_TYPE_IMU_ACCELERATION, raw_accelerometer);
-        //TODO: Change Gyro function
-        //BLE_SendPacket(DATA_TYPE_IMU_GYROSCOPE, (uint32_t)gyroscope_data.x);
-
-        // Save the raw accelerometer and gyroscope data in memory
-        // Create timestamp with sampling frequency @100 Hz
-        timestamp.sss=tim*10;
-		if(timestamp.sss == 1000) {
-			timestamp.ss=timestamp.ss+1;
-			timestamp.sss= 0;
-			tim = 0;
-			if (timestamp.ss==60){
-				timestamp.mm=timestamp.mm+1;
-				timestamp.ss=0;
-				if (timestamp.mm==60){
-					timestamp.hh=timestamp.hh+1;
-					timestamp.mm=0;
-				}
-			}
-		}
-
-		tim++;
-
-		// Create the data packet to be saved in memory
-		write_packet(sample, timestamp, raw_accelerometer, raw_gyroscope, NAND_packet);
-		sample++;
-		// Write data packet in memory
-        write_memory();
-
-	}
-}
-
-
-/**
-  * @brief  Callback function for external interrupt events (e.g., a button press).
-  * This function is triggered by the rising edge of the user button's signal.
-  * @param  GPIO_Pin: The pin that triggered the interrupt.
-  */
 void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
 {
 	if(GPIO_Pin == USER_BUTTON_Pin)
 	{
-		// A button press can trigger different state transitions depending on the current state.
+    // A button press can trigger different state transitions depending on the current state.
 		switch(current_state) {
 			case STATE_IDLE:
-				// If the device is idle, start data acquisition.
-				erase_memory();
+				LED_On(LED_RED);
+				erase_memory(); // Cancella la memoria prima di registrare
+				LED_Off(LED_RED);
+        // --- CONFIGURAZIONE E AVVIO AUDIO VIA MDF + DMA ---
+        MDF_DmaConfigTypeDef mdf_dma_config = {0};
+        mdf_dma_config.Address = (uint32_t)audio_buffer;
+        mdf_dma_config.DataLength  = AUDIO_BUF_SIZE * sizeof(int16_t);
+        mdf_dma_config.MsbOnly = ENABLE;
+        
+        if (HAL_MDF_AcqStart_DMA(&MdfHandle0, &MdfFilterConfig0, &mdf_dma_config) != HAL_OK) {
+            LED_On(LED_RED);
+            Error_Handler();
+        }
 				current_state = STATE_ACQUISITION;
-				HAL_TIM_Base_Start_IT(&htim2); // Start the timer for periodic data reading
-				LED_On(LED_GREEN); // Provide visual feedback for starting acquisition
 			break;
 			case STATE_ACQUISITION:
-				// If data acquisition is active, stop it.
 				current_state = STATE_IDLE;
-				HAL_TIM_Base_Stop_IT(&htim2); // Stop the timer
-				LED_Off(LED_GREEN); // Turn off the LED
+        HAL_MDF_AcqStop_DMA(&MdfHandle0);
 				break;
 			case STATE_USB_CONNECTED:
 				// If USB is connected, start the download process.
@@ -912,6 +850,43 @@ void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
 	}
 }
 
+void update_timestamp(void) {
+    // Get total milliseconds since the board turned on
+    uint32_t current_millis = HAL_GetTick(); 
+    
+    // Convert to total seconds
+    uint32_t total_seconds = current_millis / 1000;
+
+    // Break it down into your struct
+    timestamp.sss = current_millis % 1000;          // Remaining milliseconds (0-999)
+    timestamp.ss = total_seconds % 60;              // Remaining seconds (0-59)
+    timestamp.mm = (total_seconds / 60) % 60;       // Remaining minutes (0-59)
+    
+    // Hours (0-23). The % 24 guarantees it never hits 255, keeping your exit logic safe!
+    timestamp.hh = (total_seconds / 3600) % 24;     
+}
+
+void HAL_MDF_AcqHalfCpltCallback(MDF_HandleTypeDef *hmdf) {
+    if (hmdf->Instance == MDF1_Filter0) {
+        if (current_state == STATE_ACQUISITION) {
+            update_timestamp();
+            write_packet(timestamp, &spectral_data, &audio_buffer[0], NAND_packet);
+            sample++;
+            write_memory();
+        }
+    }
+}
+
+void HAL_MDF_AcqCpltCallback(MDF_HandleTypeDef *hmdf) {
+    if (hmdf->Instance == MDF1_Filter0) {
+        if (current_state == STATE_ACQUISITION) {
+            update_timestamp();
+            write_packet(timestamp, &spectral_data, &audio_buffer[AUDIO_BLOCK_SIZE], NAND_packet);
+            sample++;
+            write_memory();
+	}
+}
+}
 /* USER CODE END 4 */
 
 /**
