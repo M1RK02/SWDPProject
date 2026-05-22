@@ -61,6 +61,9 @@ I2C_HandleTypeDef hi2c3;
 
 MDF_HandleTypeDef MdfHandle0;
 MDF_FilterConfigTypeDef MdfFilterConfig0;
+DMA_NodeTypeDef Node_GPDMA1_Channel0;
+DMA_QListTypeDef List_GPDMA1_Channel0;
+DMA_HandleTypeDef handle_GPDMA1_Channel0;
 
 SPI_HandleTypeDef hspi2;
 SPI_HandleTypeDef hspi3;
@@ -115,14 +118,15 @@ uint16_t tim = 0;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_GPDMA1_Init(void);
 static void MX_ICACHE_Init(void);
 static void MX_I2C3_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
 static void MX_MDF1_Init(void);
 static void MX_TIM2_Init(void);
-static void MX_SPI2_Init(void);
 static void MX_SPI3_Init(void);
+static void MX_SPI2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -161,14 +165,15 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_GPDMA1_Init();
   MX_ICACHE_Init();
   MX_I2C3_Init();
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_MDF1_Init();
   MX_TIM2_Init();
-  MX_SPI2_Init();
   MX_SPI3_Init();
+  MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
 
   // Turn the RED LED on to indicate the start of the initialization process
@@ -313,6 +318,34 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief GPDMA1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPDMA1_Init(void)
+{
+
+  /* USER CODE BEGIN GPDMA1_Init 0 */
+
+  /* USER CODE END GPDMA1_Init 0 */
+
+  /* Peripheral clock enable */
+  __HAL_RCC_GPDMA1_CLK_ENABLE();
+
+  /* GPDMA1 interrupt Init */
+    HAL_NVIC_SetPriority(GPDMA1_Channel0_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(GPDMA1_Channel0_IRQn);
+
+  /* USER CODE BEGIN GPDMA1_Init 1 */
+
+  /* USER CODE END GPDMA1_Init 1 */
+  /* USER CODE BEGIN GPDMA1_Init 2 */
+
+  /* USER CODE END GPDMA1_Init 2 */
+
+}
+
+/**
   * @brief I2C3 Initialization Function
   * @param None
   * @retval None
@@ -404,11 +437,9 @@ static void MX_MDF1_Init(void)
   MdfHandle0.Init.CommonParam.InterleavedFilters = 0;
   MdfHandle0.Init.CommonParam.ProcClockDivider = 1;
   MdfHandle0.Init.CommonParam.OutputClock.Activation = ENABLE;
-  MdfHandle0.Init.CommonParam.OutputClock.Pins = MDF_OUTPUT_CLOCK_ALL;
-  MdfHandle0.Init.CommonParam.OutputClock.Divider = 5;
-  MdfHandle0.Init.CommonParam.OutputClock.Trigger.Activation = ENABLE;
-  MdfHandle0.Init.CommonParam.OutputClock.Trigger.Source = MDF_CLOCK_TRIG_TRGO;
-  MdfHandle0.Init.CommonParam.OutputClock.Trigger.Edge = MDF_CLOCK_TRIG_FALLING_EDGE;
+  MdfHandle0.Init.CommonParam.OutputClock.Pins = MDF_OUTPUT_CLOCK_0;
+  MdfHandle0.Init.CommonParam.OutputClock.Divider = 10;
+  MdfHandle0.Init.CommonParam.OutputClock.Trigger.Activation = DISABLE;
   MdfHandle0.Init.SerialInterface.Activation = ENABLE;
   MdfHandle0.Init.SerialInterface.Mode = MDF_SITF_NORMAL_SPI_MODE;
   MdfHandle0.Init.SerialInterface.ClockSource = MDF_SITF_CCK0_SOURCE;
@@ -427,7 +458,7 @@ static void MX_MDF1_Init(void)
   MdfFilterConfig0.DataSource = MDF_DATA_SOURCE_BSMX;
   MdfFilterConfig0.Delay = 0;
   MdfFilterConfig0.CicMode = MDF_ONE_FILTER_SINC5;
-  MdfFilterConfig0.DecimationRatio = 16;
+  MdfFilterConfig0.DecimationRatio = 24;
   MdfFilterConfig0.Offset = 0;
   MdfFilterConfig0.Gain = 1;
   MdfFilterConfig0.ReshapeFilter.Activation = ENABLE;
@@ -436,11 +467,9 @@ static void MX_MDF1_Init(void)
   MdfFilterConfig0.HighPassFilter.CutOffFrequency = MDF_HPF_CUTOFF_0_000625FPCM;
   MdfFilterConfig0.Integrator.Activation = DISABLE;
   MdfFilterConfig0.SoundActivity.Activation = DISABLE;
-  MdfFilterConfig0.AcquisitionMode = MDF_MODE_SYNC_CONT;
-  MdfFilterConfig0.FifoThreshold = MDF_FIFO_THRESHOLD_NOT_EMPTY;
+  MdfFilterConfig0.AcquisitionMode = MDF_MODE_ASYNC_CONT;
+  MdfFilterConfig0.FifoThreshold = MDF_FIFO_THRESHOLD_HALF_FULL;
   MdfFilterConfig0.DiscardSamples = 255;
-  MdfFilterConfig0.Trigger.Source = MDF_CLOCK_TRIG_TRGO;
-  MdfFilterConfig0.Trigger.Edge = MDF_FILTER_TRIG_RISING_EDGE;
   /* USER CODE BEGIN MDF1_Init 2 */
 
   /* USER CODE END MDF1_Init 2 */
