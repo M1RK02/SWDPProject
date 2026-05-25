@@ -5,7 +5,6 @@ import pandas as pd
 from datetime import datetime
 from tkinter import Tk, filedialog, ttk, messagebox, StringVar, Label, Button
 from serial.tools import list_ports
-import serial
 from scipy.io import wavfile
 
 import matplotlib
@@ -30,7 +29,7 @@ def receive_and_save_data(ser, bin_filename, packet_size=4096, max_packets=2048 
     print("📴 Serial COM Port Closed.")
 
 
-def process_audio_bin_file(bin_filename, csv_filename=None, wav_filename=None):
+def process_audio_bin_file(bin_filename, csv_filename=None, wav_filename=None, npz_filename=None, label_str=""):
     print("🧠 Processing audio and spectral binary file...")
 
     # Updated 4096-byte packet structure
@@ -109,6 +108,29 @@ def process_audio_bin_file(bin_filename, csv_filename=None, wav_filename=None):
         spectral_df.to_csv(csv_filename, index=False)
         print(f"📄 Spectral data CSV generated: {csv_filename}")
 
+    if npz_filename:
+        # Impila le colonne dello spettrometro. Risultato: array 2D (N_pacchetti, 10)
+        spectro_matrix = np.column_stack((
+            packets["f1"], packets["f2"], packets["f3"], packets["f4"],
+            packets["f5"], packets["f6"], packets["f7"], packets["f8"],
+            packets["clear"], packets["nir"]
+        ))
+        
+        # packets["audio"] è già un array 2D (N_pacchetti, 2034)
+        audio_matrix = packets["audio"]
+        
+        # Crea un array di etichette lungo N_pacchetti
+        labels_array = np.full(packets.size, label_str)
+        
+        # Salva tutto compresso
+        np.savez_compressed(
+            npz_filename, 
+            spectro=spectro_matrix, 
+            audio=audio_matrix, 
+            labels=labels_array
+        )
+        print(f"📦 Dataset NPZ generato: {npz_filename} (Shape Spectro: {spectro_matrix.shape}, Shape Audio: {audio_matrix.shape})")
+
     # --- GRAFICO DEI DATI ---
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 10))
 
@@ -150,10 +172,10 @@ def process_audio_bin_file(bin_filename, csv_filename=None, wav_filename=None):
 
 
 def gui_select_com_and_folder():
-    """Apre una piccola GUI per selezionare COM e cartella."""
+    """Apre una piccola GUI per selezionare COM, cartella e Label."""
     root = Tk()
     root.title("Data Logger - Configuration")
-    root.geometry("400x400")
+    root.geometry("400x450")
     root.resizable(False, False)
 
     Label(root, text="🔌 Select the COM Port:", font=("Segoe UI", 10)).pack(pady=5)
@@ -169,6 +191,15 @@ def gui_select_com_and_folder():
     com_box.pack(pady=5)
     com_box.current(0)
 
+    Label(root, text="🏷️ Select Target Label:", font=("Segoe UI", 10)).pack(pady=5)
+    label_var = StringVar()
+    dummy_labels = ["LABEL0", "LABEL1", "LABEL2", "LABEL3"]
+    label_box = ttk.Combobox(
+        root, textvariable=label_var, values=dummy_labels, state="readonly", width=30
+    )
+    label_box.pack(pady=5)
+    label_box.current(0)
+
     def browse_folder():
         folder = filedialog.askdirectory(title="📂 Select the folder")
         if folder:
@@ -180,8 +211,8 @@ def gui_select_com_and_folder():
     Label(root, textvariable=folder_var, fg="blue", wraplength=350).pack(pady=5)
 
     def confirm():
-        if not folder_var.get() or "Nessuna" in com_var.get():
-            messagebox.showerror("Error", "Select a valid COM Port and a folder.")
+        if not folder_var.get() or "Nessuna" in com_var.get() or not label_var.get():
+            messagebox.showerror("Error", "Select a valid COM Port, a folder, and a Label.")
             return
         root.destroy()
 
@@ -190,7 +221,7 @@ def gui_select_com_and_folder():
     )
     root.mainloop()
 
-    return com_var.get(), folder_var.get()
+    return com_var.get(), folder_var.get(), label_var.get()
 
 
 # ==============================
@@ -199,7 +230,7 @@ def gui_select_com_and_folder():
 
 
 def main():
-    com_port, save_path = gui_select_com_and_folder()
+    com_port, save_path, selected_label = gui_select_com_and_folder()
     if not com_port or not save_path:
         print("❌ Application Stopped.")
         return
@@ -208,6 +239,7 @@ def main():
     bin_filename = os.path.join(save_path, f"{base_filename}.bin")
     csv_filename = os.path.join(save_path, f"{base_filename}_spectral.csv")
     wav_filename = os.path.join(save_path, f"{base_filename}_audio.wav")
+    npz_filename = os.path.join(save_path, f"{base_filename}_dataset.npz")
 
     BAUD_RATE = 250000
 
@@ -219,7 +251,7 @@ def main():
         print(f"⚠️ Serial Error: {e}")
         return
 
-    process_audio_bin_file(bin_filename, csv_filename, wav_filename)
+    process_audio_bin_file(bin_filename, csv_filename, wav_filename, npz_filename, selected_label)
 
 
 # ==============================
