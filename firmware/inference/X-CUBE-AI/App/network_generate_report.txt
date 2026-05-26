@@ -1,30 +1,30 @@
 ST Edge AI Core v2.2.0-20266 2adc00962
-Created date          : 2026-05-26 15:46:28
-Parameters            : generate --target stm32u5 --name network -m /Users/mirko/Developer/SWDPProject/pipeline/nn_model_windowed_quantized.tflite --compression none --verbosity 1 --workspace /var/folders/p8/f0ql1fmx0yqbsmkfmx969hpm0000gn/T/mxAI_workspace497525706625007997868893375935013 --output /Users/mirko/.stm32cubemx/network_output
+Created date          : 2026-05-26 17:08:32
+Parameters            : generate --target stm32u5 --name network -m /Users/mirko/Developer/SWDPProject/pipeline/nn_model_windowed_quantized.tflite --compression none --verbosity 1 --workspace /var/folders/p8/f0ql1fmx0yqbsmkfmx969hpm0000gn/T/mxAI_workspace5446724155204114253392209659121569 --output /Users/mirko/.stm32cubemx/network_output
 
 Exec/report summary (generate)
---------------------------------------------------------------------------------------------------------------------------
-model file         :   /Users/mirko/Developer/SWDPProject/pipeline/nn_model_windowed_quantized.tflite                     
-type               :   tflite                                                                                             
-c_name             :   network                                                                                            
-compression        :   none                                                                                               
-options            :   allocate-inputs, allocate-outputs                                                                  
-optimization       :   balanced                                                                                           
-target/series      :   stm32u5                                                                                            
-workspace dir      :   /var/folders/p8/f0ql1fmx0yqbsmkfmx969hpm0000gn/T/mxAI_workspace497525706625007997868893375935013   
-output dir         :   /Users/mirko/.stm32cubemx/network_output                                                           
-model_fmt          :   ss/sa per channel                                                                                  
-model_name         :   nn_model_windowed_quantized                                                                        
-model_hash         :   0x57fed3daec3cfb35a3df39a6e2289834                                                                 
-params #           :   651,794 items (636.66 KiB)                                                                         
---------------------------------------------------------------------------------------------------------------------------
-input 1/1          :   'serving_default_keras_tensor0', f32(1x20350), 79.49 KBytes, activations                           
-output 1/1         :   'nl_4', int8(1x2), 2 Bytes, QLinear(0.003906250,-128,int8), activations                            
-macc               :   692,524                                                                                            
-weights (ro)       :   651,944 B (636.66 KiB) (1 segment) / -1,955,232(-75.0%) vs float model                             
-activations (rw)   :   81,400 B (79.49 KiB) (1 segment) *                                                                 
-ram (total)        :   81,400 B (79.49 KiB) = 81,400 + 0 + 0                                                              
---------------------------------------------------------------------------------------------------------------------------
+---------------------------------------------------------------------------------------------------------------------------
+model file         :   /Users/mirko/Developer/SWDPProject/pipeline/nn_model_windowed_quantized.tflite                      
+type               :   tflite                                                                                              
+c_name             :   network                                                                                             
+compression        :   none                                                                                                
+options            :   allocate-inputs, allocate-outputs                                                                   
+optimization       :   balanced                                                                                            
+target/series      :   stm32u5                                                                                             
+workspace dir      :   /var/folders/p8/f0ql1fmx0yqbsmkfmx969hpm0000gn/T/mxAI_workspace5446724155204114253392209659121569   
+output dir         :   /Users/mirko/.stm32cubemx/network_output                                                            
+model_fmt          :   ss/sa per channel                                                                                   
+model_name         :   nn_model_windowed_quantized                                                                         
+model_hash         :   0x57fed3daec3cfb35a3df39a6e2289834                                                                  
+params #           :   651,794 items (636.66 KiB)                                                                          
+---------------------------------------------------------------------------------------------------------------------------
+input 1/1          :   'serving_default_keras_tensor0', f32(1x20350), 79.49 KBytes, activations                            
+output 1/1         :   'nl_4', int8(1x2), 2 Bytes, QLinear(0.003906250,-128,int8), activations                             
+macc               :   692,524                                                                                             
+weights (ro)       :   651,944 B (636.66 KiB) (1 segment) / -1,955,232(-75.0%) vs float model                              
+activations (rw)   :   81,400 B (79.49 KiB) (1 segment) *                                                                  
+ram (total)        :   81,400 B (79.49 KiB) = 81,400 + 0 + 0                                                               
+---------------------------------------------------------------------------------------------------------------------------
 (*) 'input'/'output' buffers are allocated in the activations buffer
 
 Model name - nn_model_windowed_quantized
