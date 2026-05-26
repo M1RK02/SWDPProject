@@ -3,3 +3,7 @@ numpy
 pandas
 pyserial
 scipy
+scikit-learn
+seaborn
+tensorflow
+keras
