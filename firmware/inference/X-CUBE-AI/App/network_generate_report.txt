@@ -1,0 +1,169 @@
+ST Edge AI Core v2.2.0-20266 2adc00962
+Created date          : 2026-05-26 15:46:28
+Parameters            : generate --target stm32u5 --name network -m /Users/mirko/Developer/SWDPProject/pipeline/nn_model_windowed_quantized.tflite --compression none --verbosity 1 --workspace /var/folders/p8/f0ql1fmx0yqbsmkfmx969hpm0000gn/T/mxAI_workspace497525706625007997868893375935013 --output /Users/mirko/.stm32cubemx/network_output
+
+Exec/report summary (generate)
+--------------------------------------------------------------------------------------------------------------------------
+model file         :   /Users/mirko/Developer/SWDPProject/pipeline/nn_model_windowed_quantized.tflite                     
+type               :   tflite                                                                                             
+c_name             :   network                                                                                            
+compression        :   none                                                                                               
+options            :   allocate-inputs, allocate-outputs                                                                  
+optimization       :   balanced                                                                                           
+target/series      :   stm32u5                                                                                            
+workspace dir      :   /var/folders/p8/f0ql1fmx0yqbsmkfmx969hpm0000gn/T/mxAI_workspace497525706625007997868893375935013   
+output dir         :   /Users/mirko/.stm32cubemx/network_output                                                           
+model_fmt          :   ss/sa per channel                                                                                  
+model_name         :   nn_model_windowed_quantized                                                                        
+model_hash         :   0x57fed3daec3cfb35a3df39a6e2289834                                                                 
+params #           :   651,794 items (636.66 KiB)                                                                         
+--------------------------------------------------------------------------------------------------------------------------
+input 1/1          :   'serving_default_keras_tensor0', f32(1x20350), 79.49 KBytes, activations                           
+output 1/1         :   'nl_4', int8(1x2), 2 Bytes, QLinear(0.003906250,-128,int8), activations                            
+macc               :   692,524                                                                                            
+weights (ro)       :   651,944 B (636.66 KiB) (1 segment) / -1,955,232(-75.0%) vs float model                             
+activations (rw)   :   81,400 B (79.49 KiB) (1 segment) *                                                                 
+ram (total)        :   81,400 B (79.49 KiB) = 81,400 + 0 + 0                                                              
+--------------------------------------------------------------------------------------------------------------------------
+(*) 'input'/'output' buffers are allocated in the activations buffer
+
+Model name - nn_model_windowed_quantized
+------ ------------------------------------------------ ---------------- ----------------- --------- -------------------------------- --- --------------- ------------------- --------------------- 
+m_id   layer (type,original)                            oshape           param/size             macc                     connected to   | c_size          c_macc              c_type                
+------ ------------------------------------------------ ---------------- ----------------- --------- -------------------------------- --- --------------- ------------------- --------------------- 
+0      serving_default_keras_tensor0 (Input, )          [b:1,c:20350]                                                                   |                 +40,700(+100.0%)    Conversion_[0]        
+       conversion_0 (Conversion, QUANTIZE)              [b:1,c:20350]                         40,700    serving_default_keras_tensor0   |                 -40,700(-100.0%)    
+------ ------------------------------------------------ ---------------- ----------------- --------- -------------------------------- --- --------------- ------------------- --------------------- 
+1      sequential_1_dense_1_MatMul (Placeholder, )      [b:32,c:20350]   651,200/651,200                                                | +128(+0.0%)     +651,232(+100.0%)   Dense_[1]             
+       sequential_1_dense.._1_BiasAdd (Placeholder, )   [b:32]           32/128                                                         | -128(-100.0%)                       
+       gemm_1 (Gemm, FULLY_CONNECTED)                   [b:1,c:32]                           651,232                     conversion_0   |                 -651,232(-100.0%)   
+                                                                                                          sequential_1_dense_1_MatMul   | 
+                                                                                                       sequential_1_dense.._1_BiasAdd   | 
+       nl_1_nl (Nonlinearity, FULLY_CONNECTED)          [b:1,c:32]                                32                           gemm_1   |                 -32(-100.0%)        
+------ ------------------------------------------------ ---------------- ----------------- --------- -------------------------------- --- --------------- ------------------- --------------------- 
+2      sequential_1_dense_1_2_MatMul (Placeholder, )    [b:16,c:32]      512/512                                                        | +64(+12.5%)     +528(+100.0%)       Dense_[2]             
+       sequential_1_dense.._2_BiasAdd (Placeholder, )   [b:16]           16/64                                                          | -64(-100.0%)                        
+       gemm_2 (Gemm, FULLY_CONNECTED)                   [b:1,c:16]                               528                          nl_1_nl   |                 -528(-100.0%)       
+                                                                                                        sequential_1_dense_1_2_MatMul   | 
+                                                                                                       sequential_1_dense.._2_BiasAdd   | 
+       nl_2_nl (Nonlinearity, FULLY_CONNECTED)          [b:1,c:16]                                16                           gemm_2   |                 -16(-100.0%)        
+------ ------------------------------------------------ ---------------- ----------------- --------- -------------------------------- --- --------------- ------------------- --------------------- 
+3      sequential_1_dense_2_1_MatMul (Placeholder, )    [b:2,c:16]       32/32                                                          | +8(+25.0%)      +34(+100.0%)        Dense_[3]             
+       sequential_1_dense_2_1_BiasAdd (Placeholder, )   [b:2]            2/8                                                            | -8(-100.0%)                         
+       gemm_3 (Gemm, FULLY_CONNECTED)                   [b:1,c:2]                                 34                          nl_2_nl   |                 -34(-100.0%)        
+                                                                                                        sequential_1_dense_2_1_MatMul   | 
+                                                                                                       sequential_1_dense_2_1_BiasAdd   | 
+------ ------------------------------------------------ ---------------- ----------------- --------- -------------------------------- --- --------------- ------------------- --------------------- 
+4      nl_4 (Nonlinearity, SOFTMAX)                     [b:1,c:2]                                 30                           gemm_3   |                                     Nonlinearity_[o][4]   
+------ ------------------------------------------------ ---------------- ----------------- --------- -------------------------------- --- --------------- ------------------- --------------------- 
+model/c-model: macc=692,572/692,524 -48(-0.0%) weights=651,944/651,944  activations=--/81,400 io=--/0
+
+
+
+Generated C-graph summary
+------------------------------------------------------------------------------------------------------------------------
+model name            : nn_model_windowed_quantized
+c-name                : network
+c-node #              : 5
+c-array #             : 16
+activations size      : 81400 (1 segment)
+weights size          : 651944 (1 segment)
+macc                  : 692524
+inputs                : ['serving_default_keras_tensor0_output']
+outputs               : ['nl_4_output']
+
+C-Arrays (16)
+------ -------------------------------------- --------------- ------------------------- ----------- --------- 
+c_id   name (*_array)                         item/size       domain/mem-pool           c-type      comment   
+------ -------------------------------------- --------------- ------------------------- ----------- --------- 
+0      conversion_0_output                    20350/20350     activations/**default**   s8                    
+1      gemm_1_bias                            32/128          weights/weights           const s32             
+2      gemm_1_output                          32/32           activations/**default**   s8                    
+3      gemm_1_scratch0                        20510/41020     activations/**default**   s16                   
+4      gemm_1_weights                         651200/651200   weights/weights           const s8              
+5      gemm_2_bias                            16/64           weights/weights           const s32             
+6      gemm_2_output                          16/16           activations/**default**   s8                    
+7      gemm_2_scratch0                        112/224         activations/**default**   s16                   
+8      gemm_2_weights                         512/512         weights/weights           const s8              
+9      gemm_3_bias                            2/8             weights/weights           const s32             
+10     gemm_3_output                          2/2             activations/**default**   s8                    
+11     gemm_3_scratch0                        26/52           activations/**default**   s16                   
+12     gemm_3_weights                         32/32           weights/weights           const s8              
+13     nl_4_output                            2/2             activations/**default**   s8          /output   
+14     nl_4_scratch0                          1/4             activations/**default**   s32                   
+15     serving_default_keras_tensor0_output   20350/81400     activations/**default**   float       /input    
+------ -------------------------------------- --------------- ------------------------- ----------- --------- 
+
+C-Layers (5)
+------ ---------------- ---- --------------- -------- -------- ----------------------------------------- -------------------- 
+c_id   name (*_layer)   id   layer_type      macc     rom      tensors                                   shape (array id)     
+------ ---------------- ---- --------------- -------- -------- ----------------------------------------- -------------------- 
+0      conversion_0     0    Conversion      40700    0        I: serving_default_keras_tensor0_output   f32(1x20350) (15)    
+                                                               O: conversion_0_output                    int8(1x20350) (0)    
+------ ---------------- ---- --------------- -------- -------- ----------------------------------------- -------------------- 
+1      gemm_1           1    Dense           651232   651328   I: conversion_0_output                    int8(1x20350) (0)    
+                                                               S: gemm_1_scratch0                                             
+                                                               W: gemm_1_weights                         int8(32x20350) (4)   
+                                                               W: gemm_1_bias                            int32(32) (1)        
+                                                               O: gemm_1_output                          int8(1x32) (2)       
+------ ---------------- ---- --------------- -------- -------- ----------------------------------------- -------------------- 
+2      gemm_2           2    Dense           528      576      I: gemm_1_output                          int8(1x32) (2)       
+                                                               S: gemm_2_scratch0                                             
+                                                               W: gemm_2_weights                         int8(16x32) (8)      
+                                                               W: gemm_2_bias                            int32(16) (5)        
+                                                               O: gemm_2_output                          int8(1x16) (6)       
+------ ---------------- ---- --------------- -------- -------- ----------------------------------------- -------------------- 
+3      gemm_3           3    Dense           34       40       I: gemm_2_output                          int8(1x16) (6)       
+                                                               S: gemm_3_scratch0                                             
+                                                               W: gemm_3_weights                         int8(2x16) (12)      
+                                                               W: gemm_3_bias                            int32(2) (9)         
+                                                               O: gemm_3_output                          int8(1x2) (10)       
+------ ---------------- ---- --------------- -------- -------- ----------------------------------------- -------------------- 
+4      nl_4             4    Nonlinearity    30       0        I: gemm_3_output                          int8(1x2) (10)       
+                                                               S: nl_4_scratch0                                               
+                                                               O: nl_4_output                            int8(1x2) (13)       
+------ ---------------- ---- --------------- -------- -------- ----------------------------------------- -------------------- 
+
+
+
+Number of operations per c-layer
+------- ------ --------------------------- --------- ------------- 
+c_id    m_id   name (type)                       #op          type 
+------- ------ --------------------------- --------- ------------- 
+0       0      conversion_0 (Conversion)      40,700   smul_f32_s8 
+1       1      gemm_1 (Dense)                651,232    smul_s8_s8 
+2       2      gemm_2 (Dense)                    528    smul_s8_s8 
+3       3      gemm_3 (Dense)                     34    smul_s8_s8 
+4       4      nl_4 (Nonlinearity)                30      op_s8_s8 
+------- ------ --------------------------- --------- ------------- 
+total                                        692,524 
+
+Number of operation types
+---------------- --------- ----------- 
+operation type           #           % 
+---------------- --------- ----------- 
+smul_f32_s8         40,700        5.9% 
+smul_s8_s8         651,794       94.1% 
+op_s8_s8                30        0.0% 
+
+Complexity report (model)
+------ ------------------------------- ------------------------- ------------------------- ------ 
+m_id   name                            c_macc                    c_rom                     c_id   
+------ ------------------------------- ------------------------- ------------------------- ------ 
+0      serving_default_keras_tensor0   |                  5.9%   |                  0.0%   [0]    
+1      sequential_1_dense_1_MatMul     ||||||||||||||||  94.0%   ||||||||||||||||  99.9%   [1]    
+2      sequential_1_dense_1_2_MatMul   |                  0.1%   |                  0.1%   [2]    
+3      sequential_1_dense_2_1_MatMul   |                  0.0%   |                  0.0%   [3]    
+4      nl_4                            |                  0.0%   |                  0.0%   [4]    
+------ ------------------------------- ------------------------- ------------------------- ------ 
+macc=692,524 weights=651,944 act=81,400 ram_io=0
+
+Generated files (7)
+---------------------------------------------------------------- 
+/Users/mirko/.stm32cubemx/network_output/network_data_params.h   
+/Users/mirko/.stm32cubemx/network_output/network_data_params.c   
+/Users/mirko/.stm32cubemx/network_output/network_data.h          
+/Users/mirko/.stm32cubemx/network_output/network_data.c          
+/Users/mirko/.stm32cubemx/network_output/network_config.h        
+/Users/mirko/.stm32cubemx/network_output/network.h               
+/Users/mirko/.stm32cubemx/network_output/network.c               
