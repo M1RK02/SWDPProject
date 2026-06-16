@@ -71,23 +71,19 @@ void erase_good_blocks(uint8_t *bad_blocks){
 	}
 }
 
-void write_packet(Time_Struct timestamp, AS7341_SpectralData_t *spec_data, int16_t *audio_buffer, uint8_t *NAND_packet){
-    // 1. Write the Time_Struct (5 bytes)
-    NAND_packet[0] = timestamp.hh;
-    NAND_packet[1] = timestamp.mm;
-    NAND_packet[2] = timestamp.ss;
-    NAND_packet[3] = timestamp.sss & 0xFF;         
-    NAND_packet[4] = (timestamp.sss >> 8) & 0xFF;  
+void write_packet(uint16_t packet_index, AS7341_SpectralData_t *spec_data, int16_t *audio_buffer, uint8_t *NAND_packet){
+	// 1. Add 2 bytes of padding to align everything
+	NAND_packet[0] = 0;
+    NAND_packet[1] = 0;
+
+    // 2. Write Packet Index
+	NAND_packet[2] = (packet_index)      & 0xFF;
+	NAND_packet[3] = (packet_index >> 8) & 0xFF;
     
-    // 2. Write the Spectrometer Data (20 bytes)
+    // 3. Write the Spectrometer Data (20 bytes)
     // Copies f1..f8, clear, nir directly into the packet
-    memcpy(&NAND_packet[5], spec_data, sizeof(AS7341_SpectralData_t));
+    memcpy(&NAND_packet[4], spec_data, sizeof(AS7341_SpectralData_t));
     
-    // 3. Add 3 bytes of padding so the audio starts on an even boundary (Byte 28)
-    NAND_packet[25] = 0;
-    NAND_packet[26] = 0;
-    NAND_packet[27] = 0;
-    
-    // 4. Copy the audio data into the remaining 4068 bytes
-    memcpy(&NAND_packet[28], audio_buffer, BYTES_PER_SAMPLE - 28);
+    // 4. Copy the audio data into the remaining 4072 bytes
+    memcpy(&NAND_packet[24], audio_buffer, BYTES_PER_SAMPLE - 24);
 }

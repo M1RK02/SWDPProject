@@ -87,7 +87,7 @@ AS7341_Handle_t h_as7341;
 AS7341_SpectralData_t spectral_data;
 
 // --- Buffer Audio DMA Circolare Hardware ---
-#define AUDIO_BLOCK_SIZE 2034
+#define AUDIO_BLOCK_SIZE 2036
 #define AUDIO_BUF_SIZE   (AUDIO_BLOCK_SIZE * 2) 
 int16_t audio_buffer[AUDIO_BUF_SIZE];
 
@@ -108,9 +108,7 @@ uint8_t bad_blocks2[2048]={0}; // bad blocks array for erasing
 uint8_t data_letto[4096] = {0};
 int exit_flag = 0;
 
-// Timestamp variables //
-Time_Struct timestamp;
-uint16_t tim = 0;
+volatile uint16_t packet_index = 0;
 
 /* USER CODE END PV */
 
@@ -182,7 +180,7 @@ int main(void)
   find_bad_blocks(bad_blocks); // find bad_blocks and save them
 
   // Inizializzazione Spettrometro AS7341 sulla I2C3
-  if (AS7341_Init( & h_as7341, & hi2c3, 29, 599, AS7341_GAIN_32X) != AS7341_OK) {
+  if (AS7341_Init( & h_as7341, & hi2c3, 50, 999, AS7341_GAIN_8X) != AS7341_OK) {
       LED_On(LED_RED);
       Error_Handler();
   }
@@ -236,7 +234,7 @@ int main(void)
             LED_On(LED_GREEN);
             LED_On(LED_RED);
 
-	  		   // This state manages reading data blocks and sending them via USB.
+	  		  // This state manages reading data blocks and sending them via USB.
 	  		  // Once download is complete, the state returns to USB_CONNECTED.
 	  		  // Read data packets from memory
 	  		  read_memory_and_transmit();
@@ -812,6 +810,7 @@ void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
 			case STATE_IDLE:
 				LED_On(LED_RED);
 				erase_memory(); // Cancella la memoria prima di registrare
+        packet_index = 0;
 				LED_Off(LED_RED);
         // --- CONFIGURAZIONE E AVVIO AUDIO VIA MDF + DMA ---
         MDF_DmaConfigTypeDef mdf_dma_config = {0};
@@ -850,27 +849,11 @@ void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
 	}
 }
 
-void update_timestamp(void) {
-    // Get total milliseconds since the board turned on
-    uint32_t current_millis = HAL_GetTick(); 
-    
-    // Convert to total seconds
-    uint32_t total_seconds = current_millis / 1000;
-
-    // Break it down into your struct
-    timestamp.sss = current_millis % 1000;          // Remaining milliseconds (0-999)
-    timestamp.ss = total_seconds % 60;              // Remaining seconds (0-59)
-    timestamp.mm = (total_seconds / 60) % 60;       // Remaining minutes (0-59)
-    
-    // Hours (0-23). The % 24 guarantees it never hits 255, keeping your exit logic safe!
-    timestamp.hh = (total_seconds / 3600) % 24;     
-}
-
 void HAL_MDF_AcqHalfCpltCallback(MDF_HandleTypeDef *hmdf) {
     if (hmdf->Instance == MDF1_Filter0) {
         if (current_state == STATE_ACQUISITION) {
-            update_timestamp();
-            write_packet(timestamp, &spectral_data, &audio_buffer[0], NAND_packet);
+            write_packet(packet_index, &spectral_data, &audio_buffer[0], NAND_packet);
+            packet_index++;
             sample++;
             write_memory();
         }
@@ -880,8 +863,8 @@ void HAL_MDF_AcqHalfCpltCallback(MDF_HandleTypeDef *hmdf) {
 void HAL_MDF_AcqCpltCallback(MDF_HandleTypeDef *hmdf) {
     if (hmdf->Instance == MDF1_Filter0) {
         if (current_state == STATE_ACQUISITION) {
-            update_timestamp();
-            write_packet(timestamp, &spectral_data, &audio_buffer[AUDIO_BLOCK_SIZE], NAND_packet);
+            write_packet(packet_index, &spectral_data, &audio_buffer[AUDIO_BLOCK_SIZE], NAND_packet);
+            packet_index++;
             sample++;
             write_memory();
 	}
