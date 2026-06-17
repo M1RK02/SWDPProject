@@ -32,22 +32,27 @@ def receive_and_save_data(ser, bin_filename, packet_size=4096, max_packets=2048 
 def process_audio_bin_file(bin_filename, csv_filename=None, wav_filename=None, npz_filename=None):
     print("🧠 Processing audio and spectral binary file...")
 
-    # Optimized 4096-byte packet structure aligned to 32-bit boundary
+    # --- 📐 REVISED 4096-BYTE PACKET LAYOUT ---
+    # Header: 1 + 2 + 1 + 20 + 4 = 28 bytes
+    # Audio:  2034 samples * 2 bytes = 4068 bytes
+    # Total:  28 + 4068 = 4096 bytes
     packet_dtype = np.dtype(
         [
-            ("pad", np.uint8, 2),     # 2 bytes of padding
-            ("packet_index", "<u2"),  # 2 bytes (uint16_t)
-            ("f1", "<u2"),            # 2 bytes (Spectrometer Data - 20 bytes total)
-            ("f2", "<u2"),            # 2 bytes
-            ("f3", "<u2"),            # 2 bytes
-            ("f4", "<u2"),            # 2 bytes
-            ("f5", "<u2"),            # 2 bytes
-            ("f6", "<u2"),            # 2 bytes
-            ("f7", "<u2"),            # 2 bytes
-            ("f8", "<u2"),            # 2 bytes
-            ("clear", "<u2"),         # 2 bytes
-            ("nir", "<u2"),           # 2 bytes
-            ("audio", "<i2", 2036),   # 4072 bytes (Audio Data -> 2036 int16 samples)
+            ("start_char", "S1"),       # 1 byte ('S')
+            ("packet_index", "<u2"),    # 2 bytes (uint16_t)
+            ("spectral_flag", "u1"),    # 1 byte (Flag: New vs Old spectral data)
+            ("f1", "<u2"),              # 20 bytes total for spectral channels
+            ("f2", "<u2"),
+            ("f3", "<u2"),
+            ("f4", "<u2"),
+            ("f5", "<u2"),
+            ("f6", "<u2"),
+            ("f7", "<u2"),
+            ("f8", "<u2"),
+            ("clear", "<u2"),
+            ("nir", "<u2"),   
+            ("flickering_type", "<u4"), # 4 bytes (32-bit enum, values 0 to 3)
+            ("audio", "<i2", 2034),     # 4068 bytes (Audio Data -> 2034 int16 samples)
         ]
     )
 
@@ -63,6 +68,11 @@ def process_audio_bin_file(bin_filename, csv_filename=None, wav_filename=None, n
         return
 
     # --- 🔍 PACKET INTEGRITY CHECK ---
+    valid_starts = packets["start_char"] == b"S"
+    if not np.all(valid_starts):
+        bad_indices = np.where(~valid_starts)[0]
+        print(f"❌ MISALIGNED PACKETS DETECTED! {len(bad_indices)} packets did not start with 'S'.")
+
     indices = packets["packet_index"].astype(int)
     if len(indices) > 1:
         # Simple step check: every packet must be exactly 1 index higher than the last
@@ -79,7 +89,7 @@ def process_audio_bin_file(bin_filename, csv_filename=None, wav_filename=None, n
         else:
             print("✅ DATA INTEGRITY VERIFIED: Packet indices are perfectly sequential (+1). No drops detected.")
 
-    # Extract all the 2036-sample audio chunks and flatten them into a single 1D vector
+    # Extract all the 2034-sample audio chunks and flatten them into a single 1D vector
     audio_samples = packets["audio"].flatten()
 
     print(f"📊 Total audio samples extracted: {len(audio_samples)}")
@@ -91,45 +101,39 @@ def process_audio_bin_file(bin_filename, csv_filename=None, wav_filename=None, n
         wavfile.write(wav_filename, SAMPLE_RATE, audio_samples)
         print(f"🎵 Audio file WAV generated: {wav_filename}")
 
-    # --- 🌈 SPECTROMETER DATA EXTRACTION (Dropped packet_index here) ---
-    # Pandas DataFrame automatically falls back to its own sequential index [0, 1, 2...]
+    # --- 🌈 SPECTROMETER & TELEMETRY EXTRACTION ---
     spectral_df = pd.DataFrame(
         {
-            "F1": packets["f1"],
-            "F2": packets["f2"],
-            "F3": packets["f3"],
-            "F4": packets["f4"],
-            "F5": packets["f5"],
-            "F6": packets["f6"],
-            "F7": packets["f7"],
-            "F8": packets["f8"],
-            "CLEAR": packets["clear"],
-            "NIR": packets["nir"],
+            "F1": packets["f1"], "F2": packets["f2"], "F3": packets["f3"],
+            "F4": packets["f4"], "F5": packets["f5"], "F6": packets["f6"],
+            "F7": packets["f7"], "F8": packets["f8"], 
+            "CLEAR": packets["clear"], "NIR": packets["nir"],
+            "SPECTRAL_FLAG": packets["spectral_flag"],
+            "FLICKERING_TYPE": packets["flickering_type"],
         }
     )
 
     if csv_filename:
         spectral_df.to_csv(csv_filename, index=False)
-        print(f"📄 Spectral data CSV generated: {csv_filename}")
+        print(f"📄 Spectral and telemetry CSV generated: {csv_filename}")
 
     if npz_filename:
-        # Stack spectrometer columns into a 2D matrix (N_packets, 10)
+        # Stack spectrometer channels into a 2D matrix (N_packets, 10)
         spectro_matrix = np.column_stack((
             packets["f1"], packets["f2"], packets["f3"], packets["f4"],
             packets["f5"], packets["f6"], packets["f7"], packets["f8"],
             packets["clear"], packets["nir"]
         ))
         
-        # Audio matrix 2D layout (N_packets, 2036)
-        audio_matrix = packets["audio"]
-        
-        # Save compressed matrices clean
+        # Save compressed matrices along with telemetry fields
         np.savez_compressed(
             npz_filename, 
             spectro=spectro_matrix, 
-            audio=audio_matrix
+            audio=packets["audio"],
+            flicker=packets["flickering_type"],
+            spec_flag=packets["spectral_flag"]
         )
-        print(f"📦 NPZ Dataset generated: {npz_filename} (Shape Spectro: {spectro_matrix.shape}, Shape Audio: {audio_matrix.shape})")
+        print(f"📦 NPZ Dataset generated: {npz_filename} (Shape Spectro: {spectro_matrix.shape}, Shape Audio: {packets['audio'].shape})")
 
     # --- DATA PLOTTING ---
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 10))
@@ -142,20 +146,20 @@ def process_audio_bin_file(bin_filename, csv_filename=None, wav_filename=None, n
     ax1.grid(True)
 
     # Bottom Plot: Spectrometer Channels (Plots smoothly using dataframe row tracking)
-    channels = ["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8"]
+    channels_to_plot = ["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "CLEAR", "NIR"]
     colors = [
-        "#8A2BE2", "#0000FF", "#00BFFF", "#00FF00",
-        "#ADFF2F", "#FFFF00", "#FFA500", "#FF0000",
+        "#8A2BE2", "#0000FF", "#00BFFF", "#00FF00", "#ADFF2F", 
+        "#FFFF00", "#FFA500", "#FF0000", "#7F7F7F", "#000000"
     ]
 
-    for ch, color in zip(channels, colors):
+    for ch, color in zip(channels_to_plot, colors):
         ax2.plot(spectral_df[ch], label=ch, color=color, linewidth=1.5)
 
-    ax2.set_title("AS7341 Optical Channels over Time")
+    ax2.set_title("AS7341 Optical Channels over Time (Flickering Enums Extracted)")
     ax2.set_xlabel("Row/Packet Matrix Index")
-    ax2.set_ylabel("Raw ADC Value (Max 11000)")
+    ax2.set_ylabel("Raw ADC Value")
     ax2.grid(True)
-    ax2.legend(loc="upper right", ncol=8)
+    ax2.legend(loc="upper right", ncol=10)
 
     plt.tight_layout()
     print("📉 Rendering plots...")
