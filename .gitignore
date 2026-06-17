@@ -18,7 +18,6 @@ Desktop.ini
 $RECYCLE.BIN/
 
 # VS Code
-.vscode/
 !.vscode/extensions.json
 *.code-workspace
 .history/
