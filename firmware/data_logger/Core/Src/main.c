@@ -85,10 +85,11 @@ uint8_t usb_flag = 0;
 // Spectrometer data structures
 AS7341_Handle_t h_as7341;
 AS7341_SpectralData_t spectral_data;
+AS7341_SpectralData_t spectral_data_buffer; // Buffer for last complete values
 volatile bool spectral_data_ready = false;  // Flag set when a complete 11-channel read is finished
 
 // --- Buffer Audio DMA Circolare Hardware ---
-#define AUDIO_BLOCK_SIZE 2036
+#define AUDIO_BLOCK_SIZE 2034
 #define AUDIO_BUF_SIZE   (AUDIO_BLOCK_SIZE * 2) 
 int16_t audio_buffer[AUDIO_BUF_SIZE];
 
@@ -196,8 +197,6 @@ int main(void)
 		//LED_Toggle(LED_GREEN);
 		//HAL_Delay(1000);
 
-    //TODO remove after debug
-    usb_flag = 0;
 	  switch(current_state) {
       case STATE_IDLE:
         LED_Off(LED_RED);
@@ -216,25 +215,12 @@ int main(void)
       case STATE_ACQUISITION:
           LED_On(LED_RED);
           LED_Off(LED_GREEN);
-          // If the background EXTI hardware completes the 2-cycle read sequence:
-          if (spectral_data_ready) {
-              spectral_data_ready = false;
-
-              // Build text logging data buffer stream string 
-              static char text_buffer[160];
-              snprintf(text_buffer, sizeof(text_buffer), 
-                        "[SPEC] F1-F4:%u,%u,%u,%u | F5-F8:%u,%u,%u,%u | C:%u | NIR:%u | FLK:%d\r\n",
-                        spectral_data.f1, spectral_data.f2, spectral_data.f3, spectral_data.f4,
-                        spectral_data.f5, spectral_data.f6, spectral_data.f7, spectral_data.f8,
-                        spectral_data.clear, spectral_data.nir, (int)spectral_data.flicker);
-              
-              CDC_Transmit_FS((uint8_t*)text_buffer, strlen(text_buffer));
-
-              // Instantly re-trigger the asynchronous background hardware engine for the next capture sequence
+          // If the spectrometer has finished Cycle 2, re-trigger the next read sequence
+          if (h_as7341.state == AS7341_STATE_IDLE) {
               AS7341_StartRead(&h_as7341);
           }
           // Microphone acquisition is handled by the DMA
-			break;
+          break;
 
       case STATE_USB_CONNECTED:
         LED_Off(LED_RED);
@@ -840,9 +826,9 @@ void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
             LED_On(LED_RED);
             Error_Handler();
         }
-				current_state = STATE_ACQUISITION;
-        spectral_data_ready = false;
         AS7341_StartRead(&h_as7341); // Initial async trigger sequence launch
+
+				current_state = STATE_ACQUISITION;
 			break;
 			case STATE_ACQUISITION:
 				current_state = STATE_IDLE;
@@ -867,6 +853,7 @@ void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin) {
 
       if (AS7341_IRQHandler(&h_as7341, &spectral_data)) {
           // Evaluates true ONLY when Cycle 2 concludes cleanly
+          spectral_data_buffer = spectral_data; // Copy in one shot
           spectral_data_ready = true;
       }
 
@@ -878,7 +865,8 @@ void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin) {
 void HAL_MDF_AcqHalfCpltCallback(MDF_HandleTypeDef *hmdf) {
     if (hmdf->Instance == MDF1_Filter0) {
         if (current_state == STATE_ACQUISITION) {
-            write_packet(packet_index, &spectral_data, &audio_buffer[0], NAND_packet);
+            write_packet(NAND_packet, packet_index, spectral_data_ready, &spectral_data_buffer, &audio_buffer[0]);
+            spectral_data_ready = false;
             packet_index++;
             sample++;
             write_memory();
@@ -889,12 +877,13 @@ void HAL_MDF_AcqHalfCpltCallback(MDF_HandleTypeDef *hmdf) {
 void HAL_MDF_AcqCpltCallback(MDF_HandleTypeDef *hmdf) {
     if (hmdf->Instance == MDF1_Filter0) {
         if (current_state == STATE_ACQUISITION) {
-            write_packet(packet_index, &spectral_data, &audio_buffer[AUDIO_BLOCK_SIZE], NAND_packet);
+            write_packet(NAND_packet, packet_index, spectral_data_ready, &spectral_data_buffer, &audio_buffer[AUDIO_BLOCK_SIZE]);
+            spectral_data_ready = false;
             packet_index++;
             sample++;
             write_memory();
-	}
-}
+        }
+    }
 }
 /* USER CODE END 4 */
 

@@ -71,19 +71,20 @@ void erase_good_blocks(uint8_t *bad_blocks){
 	}
 }
 
-void write_packet(uint16_t packet_index, AS7341_SpectralData_t *spec_data, int16_t *audio_buffer, uint8_t *NAND_packet){
-	// 1. Add 2 bytes of padding to align everything
-	NAND_packet[0] = 0;
-    NAND_packet[1] = 0;
+void write_packet(uint8_t *NAND_packet, uint16_t packet_index, uint8_t new_data_flag, AS7341_SpectralData_t *spec_data, int16_t *audio_buffer){
+	// Magic byte to not trigger
+	NAND_packet[0] = 83;
 
-    // 2. Write Packet Index
-	NAND_packet[2] = (packet_index)      & 0xFF;
-	NAND_packet[3] = (packet_index >> 8) & 0xFF;
-    
-    // 3. Write the Spectrometer Data (20 bytes)
-    // Copies f1..f8, clear, nir directly into the packet
+	// Write Packet Index
+	NAND_packet[1] = (packet_index)      & 0xFF;
+	NAND_packet[2] = (packet_index >> 8) & 0xFF;
+
+	// Is spectrometer data fresh?
+    NAND_packet[3] = new_data_flag;
+
+    // Write the Spectrometer Data (24 bytes)
     memcpy(&NAND_packet[4], spec_data, sizeof(AS7341_SpectralData_t));
     
-    // 4. Copy the audio data into the remaining 4072 bytes
-    memcpy(&NAND_packet[24], audio_buffer, BYTES_PER_SAMPLE - 24);
+    // 4. Copy the audio data into the remaining 4068 bytes
+    memcpy(&NAND_packet[28], audio_buffer, BYTES_PER_SAMPLE - 28);
 }
