@@ -85,6 +85,8 @@ uint8_t usb_flag = 0;
 // Spectrometer data structures
 AS7341_Handle_t h_as7341;
 AS7341_SpectralData_t spectral_data;
+AS7341_SpectralData_t spectral_data_buffer; // Buffer for last complete values
+volatile bool spectral_data_ready = false;  // Flag set when a complete 11-channel read is finished
 
 // --- Buffer Audio DMA Circolare Hardware ---
 #define AUDIO_BLOCK_SIZE 2034
@@ -92,7 +94,6 @@ AS7341_SpectralData_t spectral_data;
 int16_t audio_buffer[AUDIO_BUF_SIZE];
 
 /// ----- NAND FLASH variables ----- ///
-
 uint8_t NAND_packet[4096] = {0};
 uint16_t sample = 0;
 uint16_t blocco_scritto = 0;
@@ -108,10 +109,7 @@ uint8_t bad_blocks2[2048]={0}; // bad blocks array for erasing
 uint8_t data_letto[4096] = {0};
 int exit_flag = 0;
 
-// Timestamp variables //
-Time_Struct timestamp;
-uint16_t tim = 0;
-
+volatile uint16_t packet_index = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -182,11 +180,10 @@ int main(void)
   find_bad_blocks(bad_blocks); // find bad_blocks and save them
 
   // Inizializzazione Spettrometro AS7341 sulla I2C3
-  if (AS7341_Init( & h_as7341, & hi2c3, 29, 599, AS7341_GAIN_32X) != AS7341_OK) {
+  if (AS7341_Init(&h_as7341, &hi2c3, 99, 599, AS7341_GAIN_8X, true) != AS7341_OK) {
       LED_On(LED_RED);
       Error_Handler();
   }
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -200,49 +197,48 @@ int main(void)
 		//LED_Toggle(LED_GREEN);
 		//HAL_Delay(1000);
 
-	  switch(current_state)
-	  {
-	  	  case STATE_IDLE:
-            LED_Off(LED_RED);
-            LED_Off(LED_GREEN);
-	  		// Check if a USB connection has been detected
-	  		if(!usb_flag)
-		    {
-	  			//MX_USB_Device_Init();
-		    }
-	  		else
-	  		{
-			   // Transition to the USB_CONNECTED state
-	  		   current_state = STATE_USB_CONNECTED;
-			   // Green LED on upon USB Connection
-			   LED_On(LED_GREEN);
-		    }
-	  		break;
+	  switch(current_state) {
+      case STATE_IDLE:
+        LED_Off(LED_RED);
+        LED_Off(LED_GREEN);
+        // Check if a USB connection has been detected
+        if(!usb_flag) {
+          //MX_USB_Device_Init();
+        } else {
+          // Transition to the USB_CONNECTED state
+          current_state = STATE_USB_CONNECTED;
+          // Green LED on upon USB Connection
+          LED_On(LED_GREEN);
+        }
+      break;
 
-	  	  case STATE_ACQUISITION:
-            LED_On(LED_RED);
-            LED_Off(LED_GREEN);
-            AS7341_ReadSpectral_NonBlocking(&h_as7341, &spectral_data);
-            // Microphone acquisition is handled by the DMA
-			break;
+      case STATE_ACQUISITION:
+          LED_On(LED_RED);
+          LED_Off(LED_GREEN);
+          // If the spectrometer has finished Cycle 2, re-trigger the next read sequence
+          if (h_as7341.state == AS7341_STATE_IDLE) {
+              AS7341_StartRead(&h_as7341);
+          }
+          // Microphone acquisition is handled by the DMA
+          break;
 
-	  	  case STATE_USB_CONNECTED:
-            LED_Off(LED_RED);
-            LED_On(LED_GREEN);
-            HAL_Delay(10);
-	  		break;
+      case STATE_USB_CONNECTED:
+        LED_Off(LED_RED);
+        LED_On(LED_GREEN);
+        HAL_Delay(10);
+      break;
 
-	  	  case STATE_DOWNLOAD:
-            LED_On(LED_GREEN);
-            LED_On(LED_RED);
+      case STATE_DOWNLOAD:
+        LED_On(LED_GREEN);
+        LED_On(LED_RED);
 
-	  		   // This state manages reading data blocks and sending them via USB.
-	  		  // Once download is complete, the state returns to USB_CONNECTED.
-	  		  // Read data packets from memory
-	  		  read_memory_and_transmit();
+        // This state manages reading data blocks and sending them via USB.
+        // Once download is complete, the state returns to USB_CONNECTED.
+        // Read data packets from memory
+        read_memory_and_transmit();
 
-			 current_state = STATE_USB_CONNECTED;
-	  		 break;
+        current_state = STATE_USB_CONNECTED;
+      break;
 	  }
 
   }
@@ -768,11 +764,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(USER_BUTTON_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : MCU_I_O_2_Pin MCU_I_O_1_Pin */
-  GPIO_InitStruct.Pin = MCU_I_O_2_Pin|MCU_I_O_1_Pin;
+  /*Configure GPIO pin : MCU_I_O_2_Pin */
+  GPIO_InitStruct.Pin = MCU_I_O_2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(MCU_I_O_2_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : MCU_I_O_1_Pin */
+  GPIO_InitStruct.Pin = MCU_I_O_1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(MCU_I_O_1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : MCU_GREEN_LED_Pin MCU_RED_LED_Pin */
   GPIO_InitStruct.Pin = MCU_GREEN_LED_Pin|MCU_RED_LED_Pin;
@@ -812,6 +814,7 @@ void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
 			case STATE_IDLE:
 				LED_On(LED_RED);
 				erase_memory(); // Cancella la memoria prima di registrare
+        packet_index = 0;
 				LED_Off(LED_RED);
         // --- CONFIGURAZIONE E AVVIO AUDIO VIA MDF + DMA ---
         MDF_DmaConfigTypeDef mdf_dma_config = {0};
@@ -823,6 +826,8 @@ void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
             LED_On(LED_RED);
             Error_Handler();
         }
+        AS7341_StartRead(&h_as7341); // Initial async trigger sequence launch
+
 				current_state = STATE_ACQUISITION;
 			break;
 			case STATE_ACQUISITION:
@@ -841,36 +846,28 @@ void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
 	}
 }
 
-// Falling Edge when User Button is not pressed
-void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
-{
-	if(GPIO_Pin == USER_BUTTON_Pin)
-	{
+void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin) {
+  // Spectrometer Hardware Interrupt
+  if (GPIO_Pin == MCU_I_O_1_Pin) {
+      HAL_NVIC_DisableIRQ(MCU_I_O_1_EXTI_IRQn);
 
-	}
-}
+      if (AS7341_IRQHandler(&h_as7341, &spectral_data)) {
+          // Evaluates true ONLY when Cycle 2 concludes cleanly
+          spectral_data_buffer = spectral_data; // Copy in one shot
+          spectral_data_ready = true;
+      }
 
-void update_timestamp(void) {
-    // Get total milliseconds since the board turned on
-    uint32_t current_millis = HAL_GetTick(); 
-    
-    // Convert to total seconds
-    uint32_t total_seconds = current_millis / 1000;
-
-    // Break it down into your struct
-    timestamp.sss = current_millis % 1000;          // Remaining milliseconds (0-999)
-    timestamp.ss = total_seconds % 60;              // Remaining seconds (0-59)
-    timestamp.mm = (total_seconds / 60) % 60;       // Remaining minutes (0-59)
-    
-    // Hours (0-23). The % 24 guarantees it never hits 255, keeping your exit logic safe!
-    timestamp.hh = (total_seconds / 3600) % 24;     
+      __HAL_GPIO_EXTI_CLEAR_IT(MCU_I_O_1_Pin); // Clear any pending ghost flags accrued during the write
+      HAL_NVIC_EnableIRQ(MCU_I_O_1_EXTI_IRQn);
+  }
 }
 
 void HAL_MDF_AcqHalfCpltCallback(MDF_HandleTypeDef *hmdf) {
     if (hmdf->Instance == MDF1_Filter0) {
         if (current_state == STATE_ACQUISITION) {
-            update_timestamp();
-            write_packet(timestamp, &spectral_data, &audio_buffer[0], NAND_packet);
+            write_packet(NAND_packet, packet_index, spectral_data_ready, &spectral_data_buffer, &audio_buffer[0]);
+            spectral_data_ready = false;
+            packet_index++;
             sample++;
             write_memory();
         }
@@ -880,12 +877,13 @@ void HAL_MDF_AcqHalfCpltCallback(MDF_HandleTypeDef *hmdf) {
 void HAL_MDF_AcqCpltCallback(MDF_HandleTypeDef *hmdf) {
     if (hmdf->Instance == MDF1_Filter0) {
         if (current_state == STATE_ACQUISITION) {
-            update_timestamp();
-            write_packet(timestamp, &spectral_data, &audio_buffer[AUDIO_BLOCK_SIZE], NAND_packet);
+            write_packet(NAND_packet, packet_index, spectral_data_ready, &spectral_data_buffer, &audio_buffer[AUDIO_BLOCK_SIZE]);
+            spectral_data_ready = false;
+            packet_index++;
             sample++;
             write_memory();
-	}
-}
+        }
+    }
 }
 /* USER CODE END 4 */
 

@@ -1,364 +1,258 @@
 /**
  ******************************************************************************
  * @file    as7341.c
- * @brief   Driver for AMS AS7341 11-channel spectral sensor (STM32 HAL)
+ * @brief   Clean, interrupt-driven driver for AMS AS7341 with explicit 
+ * I2C register pointer synchronization resets.
  ******************************************************************************
  */
 #include "as7341.h"
-#include <string.h>
 
-/* ===========================================================================
- * Register map (high bank, accessible when CONFIG0.REG_BANK = 0)
- * =========================================================================== */
+/* Registers */
 #define REG_ENABLE          0x80
 #define REG_ATIME           0x81
-#define REG_WTIME           0x83
-#define REG_AUXID           0x90
-#define REG_REVID           0x91
-#define REG_ID              0x92
 #define REG_STATUS          0x93
-#define REG_ASTATUS         0x94
-#define REG_CH0_DATA_L      0x95   /* CH0..CH5 ADC data, 12 bytes total */
 #define REG_STATUS2         0xA3
 #define REG_CFG0            0xA9
 #define REG_CFG1            0xAA
 #define REG_CFG6            0xAF
 #define REG_ASTEP_L         0xCA
 #define REG_ASTEP_H         0xCB
+#define REG_FD_STATUS       0xDB
+#define REG_INTENAB         0xF9
+#define REG_CH0_DATA_L      0x95
 
-/* ENABLE register bits */
-#define EN_PON              (1U << 0)   /* power on              */
-#define EN_SP_EN            (1U << 1)   /* spectral measurement  */
-#define EN_SMUXEN           (1U << 4)   /* start SMUX command    */
+/* Register bits */
+#define EN_PON              (1U << 0)
+#define EN_SP_EN            (1U << 1)
+#define EN_FDEN             (1U << 6)
+#define EN_SMUXEN           (1U << 4)
 
-/* CFG0 bits */
-#define CFG0_REG_BANK       (1U << 4)   /* 1 -> low bank (0x60..0x74) */
+#define STATUS2_AVALID      (1U << 6) /* Spectral Data Valid Flag */
 
-/* CFG6: SMUX command at bits [4:3] */
+#define INT_SIEN            (1U << 0) 
+#define INT_SPIEN           (1U << 3) 
 #define CFG6_SMUX_CMD_WRITE (0x02U << 3)
 
-/* STATUS2 */
-#define STATUS2_AVALID      (1U << 6)   /* spectral measurement complete */
+#define EXPECTED_PART_ID    0x09
+#define I2C_TIMEOUT         100
 
-#define PART_ID_EXPECTED    0x09        /* AS7341 device ID, in bits[7:2] of REG_ID */
+/* Static SMUX Mapping Definitions */
+static const uint8_t smux_low_map[20] = {
+    0x30, 0x01, 0x00, 0x00, 0x00, 0x42, 0x00, 0x00, 0x50, 0x00,
+    0x00, 0x00, 0x20, 0x04, 0x00, 0x30, 0x01, 0x50, 0x00, 0x06
+};
 
-#define I2C_TIMEOUT_MS      100
-#define DATA_READY_TIMEOUT  500
+static const uint8_t smux_high_map[20] = {
+    0x00, 0x00, 0x00, 0x40, 0x02, 0x00, 0x10, 0x03, 0x00, 0x10,
+    0x03, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x00, 0x00, 0x05
+};
 
-/* ===========================================================================
- * Low-level I2C helpers
- * =========================================================================== */
+/* --- Low-level functional helpers --- */
 
-static AS7341_Status_t i2c_write_u8(AS7341_Handle_t *dev, uint8_t reg, uint8_t val)
+static AS7341_Status_t write_reg(AS7341_Handle_t *dev, uint8_t reg, uint8_t val)
 {
-    uint8_t buf[2] = { reg, val };
-    if (HAL_I2C_Master_Transmit(dev->hi2c, AS7341_I2C_ADDR_8BIT,
-                                buf, 2, I2C_TIMEOUT_MS) != HAL_OK) {
+    uint8_t buffer[2] = { reg, val };
+    if (HAL_I2C_Master_Transmit(dev->hi2c, AS7341_I2C_ADDR_8BIT, buffer, 2, I2C_TIMEOUT) != HAL_OK) {
         return AS7341_ERR_I2C;
     }
     return AS7341_OK;
 }
 
-static AS7341_Status_t i2c_read(AS7341_Handle_t *dev, uint8_t reg,
-                                uint8_t *buf, uint16_t len)
+static AS7341_Status_t read_regs(AS7341_Handle_t *dev, uint8_t reg, uint8_t *data, uint16_t len)
 {
-    if (HAL_I2C_Master_Transmit(dev->hi2c, AS7341_I2C_ADDR_8BIT,
-                                &reg, 1, I2C_TIMEOUT_MS) != HAL_OK) {
-        return AS7341_ERR_I2C;
-    }
-    if (HAL_I2C_Master_Receive (dev->hi2c, AS7341_I2C_ADDR_8BIT,
-                                buf, len, I2C_TIMEOUT_MS) != HAL_OK) {
+    if (HAL_I2C_Mem_Read(dev->hi2c, AS7341_I2C_ADDR_8BIT, reg, I2C_MEMADD_SIZE_8BIT, data, len, I2C_TIMEOUT) != HAL_OK) {
         return AS7341_ERR_I2C;
     }
     return AS7341_OK;
 }
 
-static AS7341_Status_t i2c_read_u8(AS7341_Handle_t *dev, uint8_t reg, uint8_t *val)
+static AS7341_Status_t configure_smux_and_start(AS7341_Handle_t *dev, const uint8_t *smux_map)
 {
-    return i2c_read(dev, reg, val, 1);
-}
+    AS7341_Status_t status;
+    uint8_t base_enable = EN_PON | (dev->flicker_enabled ? EN_FDEN : 0);
 
-/* Read-modify-write a single bit/mask in a register */
-static AS7341_Status_t reg_update(AS7341_Handle_t *dev, uint8_t reg,
-                                  uint8_t mask, uint8_t value)
-{
-    uint8_t v;
-    AS7341_Status_t s = i2c_read_u8(dev, reg, &v);
-    if (s != AS7341_OK) return s;
-    v = (v & ~mask) | (value & mask);
-    return i2c_write_u8(dev, reg, v);
-}
+    /* 1. Stop conversion engines safely */
+    status = write_reg(dev, REG_ENABLE, base_enable);
+    if (status != AS7341_OK) return status;
+    
+    for (volatile uint32_t i = 0; i < 800; i++) { __NOP(); }
 
-/* ===========================================================================
- * SMUX configuration (mapping of photodiodes to the 6 ADC channels).
- * These byte sequences come straight from the AS7341 application note;
- * do not edit unless you know what you're doing.
- * =========================================================================== */
-
-static AS7341_Status_t smux_config_low_channels(AS7341_Handle_t *dev)
-{
-    /* F1-F4, CLEAR, NIR -> ADC0..ADC5 */
-    static const uint8_t map[20] = {
-        0x30, 0x01, 0x00, 0x00, 0x00, 0x42, 0x00, 0x00, 0x50, 0x00,
-        0x00, 0x00, 0x20, 0x04, 0x00, 0x30, 0x01, 0x50, 0x00, 0x06
-    };
+    /* 2. Configure SMUX registers (0x00 to 0x13) directly */
     for (uint8_t i = 0; i < 20; i++) {
-        AS7341_Status_t s = i2c_write_u8(dev, i, map[i]);
-        if (s != AS7341_OK) return s;
-    }
-    return AS7341_OK;
-}
-
-static AS7341_Status_t smux_config_high_channels(AS7341_Handle_t *dev)
-{
-    /* F5-F8, CLEAR, NIR -> ADC0..ADC5 */
-    static const uint8_t map[20] = {
-        0x00, 0x00, 0x00, 0x40, 0x02, 0x00, 0x10, 0x03, 0x50, 0x10,
-        0x03, 0x00, 0x00, 0x00, 0x24, 0x00, 0x00, 0x50, 0x00, 0x06
-    };
-    for (uint8_t i = 0; i < 20; i++) {
-        AS7341_Status_t s = i2c_write_u8(dev, i, map[i]);
-        if (s != AS7341_OK) return s;
-    }
-    return AS7341_OK;
-}
-
-/* Issue SMUX_CMD_WRITE then trigger SMUXEN and wait for the chip to clear it. */
-static AS7341_Status_t smux_apply(AS7341_Handle_t *dev)
-{
-    /* SMUX command = WRITE */
-    AS7341_Status_t s = i2c_write_u8(dev, REG_CFG6, CFG6_SMUX_CMD_WRITE);
-    if (s != AS7341_OK) return s;
-
-    /* set SMUXEN; chip clears it when done */
-    s = reg_update(dev, REG_ENABLE, EN_SMUXEN, EN_SMUXEN);
-    if (s != AS7341_OK) return s;
-
-    uint32_t t0 = HAL_GetTick();
-    while ((HAL_GetTick() - t0) < DATA_READY_TIMEOUT) {
-        uint8_t en;
-        s = i2c_read_u8(dev, REG_ENABLE, &en);
-        if (s != AS7341_OK) return s;
-        if ((en & EN_SMUXEN) == 0) return AS7341_OK;
-        HAL_Delay(1);
-    }
-    return AS7341_ERR_TO;
-}
-
-/* ===========================================================================
- * Spectral acquisition for the currently selected SMUX bank.
- * Reads 12 bytes starting at CH0_DATA_L into ch[0..5].
- * =========================================================================== */
-
-static AS7341_Status_t spectral_acquire(AS7341_Handle_t *dev, uint16_t ch[6])
-{
-    /* enable spectral measurement */
-    AS7341_Status_t s = reg_update(dev, REG_ENABLE, EN_SP_EN, EN_SP_EN);
-    if (s != AS7341_OK) return s;
-
-    /* poll AVALID */
-    uint32_t t0 = HAL_GetTick();
-    while ((HAL_GetTick() - t0) < DATA_READY_TIMEOUT) {
-        uint8_t st2;
-        s = i2c_read_u8(dev, REG_STATUS2, &st2);
-        if (s != AS7341_OK) return s;
-        if (st2 & STATUS2_AVALID) break;
-        HAL_Delay(1);
-    }
-    if ((HAL_GetTick() - t0) >= DATA_READY_TIMEOUT) return AS7341_ERR_TO;
-
-    /* read 12 bytes (CH0..CH5, little-endian) */
-    uint8_t raw[12];
-    s = i2c_read(dev, REG_CH0_DATA_L, raw, 12);
-    if (s != AS7341_OK) return s;
-
-    for (int i = 0; i < 6; i++) {
-        ch[i] = (uint16_t)raw[2*i] | ((uint16_t)raw[2*i + 1] << 8);
+        uint8_t val = smux_map[i];
+        if (i == 19) {
+            if (dev->flicker_enabled) {
+                // If flicker is enabled, ADC5 is dedicated to flicker (high nibble = 6)
+                // Cycle 1: smux_low_map has 0x06. We want 0x60 (Flicker on ADC5, NIR disabled).
+                // Cycle 2: smux_high_map has 0x05. We want 0x65 (Flicker on ADC5, NIR on ADC4).
+                val = (smux_map == smux_low_map) ? 0x60 : 0x65;
+            } else {
+                // If flicker is disabled, Cycle 1: 0x06 (NIR on ADC5). Cycle 2: 0x05 (NIR on ADC4).
+                val = (smux_map == smux_low_map) ? 0x06 : 0x05;
+            }
+        }
+        if (write_reg(dev, i, val) != AS7341_OK) return AS7341_ERR_I2C;
     }
 
-    /* disable spectral measurement before reconfiguring SMUX */
-    return reg_update(dev, REG_ENABLE, EN_SP_EN, 0);
+    /* 3. Apply SMUX configuration mapping */
+    status = write_reg(dev, REG_CFG6, CFG6_SMUX_CMD_WRITE);
+    if (status != AS7341_OK) return status;
+
+    status = write_reg(dev, REG_ENABLE, base_enable | EN_SMUXEN);
+    if (status != AS7341_OK) return status;
+
+    /* Block briefly for configuration propagation */
+    uint8_t reg_en = EN_SMUXEN;
+    while (reg_en & EN_SMUXEN) {
+        if (read_regs(dev, REG_ENABLE, &reg_en, 1) != AS7341_OK) return AS7341_ERR_I2C;
+    }
+
+    for (volatile uint32_t i = 0; i < 800; i++) { __NOP(); }
+
+    /* 4. Arm integration step and start conversions */
+    return write_reg(dev, REG_ENABLE, base_enable | EN_SP_EN);
 }
 
-/* ===========================================================================
- * Public API
- * =========================================================================== */
-
-AS7341_Status_t AS7341_ReadPartID(AS7341_Handle_t *dev, uint8_t *id)
+static AS7341_Flicker_t read_flicker_status(AS7341_Handle_t *dev)
 {
-    if (!dev || !id) return AS7341_ERR_ARG;
-    return i2c_read_u8(dev, REG_ID, id);
+    uint8_t fd_status = 0;
+    if (read_regs(dev, REG_FD_STATUS, &fd_status, 1) != AS7341_OK) {
+        return AS734_FLICKER_UNKNOWN;
+    }
+
+    if (fd_status & (1U << 5)) { 
+        write_reg(dev, REG_FD_STATUS, (1U << 5)); 
+
+        if (fd_status & (1U << 0)) return AS734_FLICKER_100HZ; 
+        if (fd_status & (1U << 1)) return AS734_FLICKER_120HZ; 
+        
+        return AS734_FLICKER_NONE;
+    }
+    return AS734_FLICKER_UNKNOWN;
 }
 
-AS7341_Status_t AS7341_PowerOn(AS7341_Handle_t *dev)
-{
-    if (!dev) return AS7341_ERR_ARG;
-    return reg_update(dev, REG_ENABLE, EN_PON, EN_PON);
-}
+/* --- Public Core API Functions --- */
 
-AS7341_Status_t AS7341_PowerOff(AS7341_Handle_t *dev)
-{
-    if (!dev) return AS7341_ERR_ARG;
-    return reg_update(dev, REG_ENABLE, EN_PON, 0);
-}
-
-AS7341_Status_t AS7341_SetGain(AS7341_Handle_t *dev, AS7341_Gain_t gain)
-{
-    if (!dev) return AS7341_ERR_ARG;
-    AS7341_Status_t s = i2c_write_u8(dev, REG_CFG1, (uint8_t)gain & 0x1F);
-    if (s == AS7341_OK) dev->gain = gain;
-    return s;
-}
-
-AS7341_Status_t AS7341_Init(AS7341_Handle_t   *dev,
-                            I2C_HandleTypeDef *hi2c,
-                            uint8_t            atime,
-                            uint16_t           astep,
-                            AS7341_Gain_t      gain)
+AS7341_Status_t AS7341_Init(AS7341_Handle_t *dev, I2C_HandleTypeDef *hi2c, 
+                            uint8_t atime, uint16_t astep, AS7341_Gain_t gain,
+                            bool enable_flicker)
 {
     if (!dev || !hi2c) return AS7341_ERR_ARG;
 
-    dev->hi2c       = hi2c;
-    dev->atime      = atime;
-    dev->astep      = astep;
-    dev->gain       = gain;
-    dev->async_state = AS7341_ASYNC_START_LOW;
-    dev->async_timer = 0;
+    dev->hi2c            = hi2c;
+    dev->atime           = atime;
+    dev->astep           = astep;
+    dev->gain            = gain;
+    dev->flicker_enabled = enable_flicker;
+    dev->state           = AS7341_STATE_IDLE;
 
-    HAL_Delay(3);   /* power-up margin */
+    HAL_Delay(5);
 
-    /* sanity check: PART_ID upper 6 bits must equal 0x09 */
-    uint8_t id;
-    AS7341_Status_t s = AS7341_ReadPartID(dev, &id);
-    if (s != AS7341_OK)               return s;
-    if (((id >> 2) & 0x3F) != PART_ID_EXPECTED) return AS7341_ERR_ID;
+    uint8_t chip_id = 0;
+    if (read_regs(dev, 0x92, &chip_id, 1) != AS7341_OK) return AS7341_ERR_I2C;
+    if (((chip_id >> 2) & 0x3F) != EXPECTED_PART_ID) return AS7341_ERR_ID;
 
-    /* power on */
-    s = AS7341_PowerOn(dev);                       if (s != AS7341_OK) return s;
+    if (write_reg(dev, REG_ATIME, atime) != AS7341_OK) return AS7341_ERR_I2C;
+    if (write_reg(dev, REG_ASTEP_L, (uint8_t)(astep & 0xFF)) != AS7341_OK) return AS7341_ERR_I2C;
+    if (write_reg(dev, REG_ASTEP_H, (uint8_t)(astep >> 8)) != AS7341_OK) return AS7341_ERR_I2C;
+    if (write_reg(dev, REG_CFG1, (uint8_t)gain & 0x1F) != AS7341_OK) return AS7341_ERR_I2C;
 
-    /* integration time */
-    s = i2c_write_u8(dev, REG_ATIME,   atime);     if (s != AS7341_OK) return s;
-    s = i2c_write_u8(dev, REG_ASTEP_L, (uint8_t)(astep & 0xFF));
-    if (s != AS7341_OK) return s;
-    s = i2c_write_u8(dev, REG_ASTEP_H, (uint8_t)(astep >> 8));
-    if (s != AS7341_OK) return s;
+    /* Route only Spectral Ready signal to the physical INT line */
+    uint8_t int_mask = INT_SPIEN;
+    if (write_reg(dev, REG_INTENAB, int_mask) != AS7341_OK) return AS7341_ERR_I2C;
 
-    /* gain */
-    return AS7341_SetGain(dev, gain);
+    uint8_t initial_enable = EN_PON | (enable_flicker ? EN_FDEN : 0);
+    return write_reg(dev, REG_ENABLE, initial_enable);
 }
 
-AS7341_Status_t AS7341_ReadSpectral(AS7341_Handle_t       *dev,
-                                    AS7341_SpectralData_t *out)
+AS7341_Status_t AS7341_StartRead(AS7341_Handle_t *dev)
 {
-    if (!dev || !out) return AS7341_ERR_ARG;
-
-    uint16_t ch[6];
-
-    /* ---- LOW channels: F1, F2, F3, F4, CLEAR, NIR ---- */
-    AS7341_Status_t s;
-    s = reg_update(dev, REG_ENABLE, EN_SP_EN, 0);  if (s != AS7341_OK) return s;
-    s = smux_config_low_channels(dev);             if (s != AS7341_OK) return s;
-    s = smux_apply(dev);                           if (s != AS7341_OK) return s;
-    s = spectral_acquire(dev, ch);                 if (s != AS7341_OK) return s;
-    out->f1    = ch[0];
-    out->f2    = ch[1];
-    out->f3    = ch[2];
-    out->f4    = ch[3];
-    out->clear = ch[4];
-    out->nir   = ch[5];
-
-    /* ---- HIGH channels: F5, F6, F7, F8, CLEAR, NIR ---- */
-    s = smux_config_high_channels(dev);            if (s != AS7341_OK) return s;
-    s = smux_apply(dev);                           if (s != AS7341_OK) return s;
-    s = spectral_acquire(dev, ch);                 if (s != AS7341_OK) return s;
-    out->f5 = ch[0];
-    out->f6 = ch[1];
-    out->f7 = ch[2];
-    out->f8 = ch[3];
-
-    return AS7341_OK;
+    if (!dev) return AS7341_ERR_ARG;
+    
+    dev->state = AS7341_STATE_WAITING_LOW;
+    
+    /* Ensure the data registers pointer bank is explicitly selected */
+    write_reg(dev, REG_CFG0, 0x00);
+    write_reg(dev, REG_STATUS, 0xFF); 
+    
+    return configure_smux_and_start(dev, smux_low_map);
 }
 
-bool AS7341_ReadSpectral_NonBlocking(AS7341_Handle_t *dev, AS7341_SpectralData_t *out)
+bool AS7341_IRQHandler(AS7341_Handle_t *dev, AS7341_SpectralData_t *out)
 {
-    if (!dev || !out) return false;
+    if (!dev || !out || dev->state == AS7341_STATE_IDLE) return false;
 
-    uint8_t st2 = 0;
-    uint8_t raw[12];
-    uint16_t ch[6];
-
-    switch (dev->async_state) {
-        
-        case AS7341_ASYNC_START_LOW:
-            // Disabilita misura precedente per sicurezza, configura canali bassi ed applica lo SMUX
-            reg_update(dev, REG_ENABLE, EN_SP_EN, 0);
-            if (smux_config_low_channels(dev) != AS7341_OK) return false;
-            if (smux_apply(dev) != AS7341_OK) return false;
-            
-            // Triggera la misura hardware reale
-            if (reg_update(dev, REG_ENABLE, EN_SP_EN, EN_SP_EN) != AS7341_OK) return false;
-            
-            dev->async_timer = HAL_GetTick();
-            dev->async_state = AS7341_ASYNC_WAIT_LOW;
-            break;
-
-        case AS7341_ASYNC_WAIT_LOW:
-            // Interroghiamo il registro di stato (Zero cicli bloccanti)
-            if (i2c_read_u8(dev, REG_STATUS2, &st2) == AS7341_OK && (st2 & STATUS2_AVALID)) {
-                // I dati LOW sono pronti sul silicio, leggiamoli
-                if (i2c_read(dev, REG_CH0_DATA_L, raw, 12) == AS7341_OK) {
-                    for (int i = 0; i < 6; i++) {
-                        ch[i] = (uint16_t)raw[2*i] | ((uint16_t)raw[2*i + 1] << 8);
-                    }
-                    out->f1    = ch[0];
-                    out->f2    = ch[1];
-                    out->f3    = ch[2];
-                    out->f4    = ch[3];
-                    out->clear = ch[4];
-                    out->nir   = ch[5];
-                }
-                dev->async_state = AS7341_ASYNC_START_HIGH;
-            } else if ((HAL_GetTick() - dev->async_timer) > DATA_READY_TIMEOUT) {
-                dev->async_state = AS7341_ASYNC_START_LOW; // Timeout di emergenza, resetta macchina
-            }
-            break;
-
-        case AS7341_ASYNC_START_HIGH:
-            // Spegne misura precedente, configura canali alti ed applica lo SMUX
-            reg_update(dev, REG_ENABLE, EN_SP_EN, 0);
-            if (smux_config_high_channels(dev) != AS7341_OK) return false;
-            if (smux_apply(dev) != AS7341_OK) return false;
-            
-            // Triggera la seconda misura hardware
-            if (reg_update(dev, REG_ENABLE, EN_SP_EN, EN_SP_EN) != AS7341_OK) return false;
-            
-            dev->async_timer = HAL_GetTick();
-            dev->async_state = AS7341_ASYNC_WAIT_HIGH;
-            break;
-
-        case AS7341_ASYNC_WAIT_HIGH:
-            // Interroghiamo lo stato dei canali alti
-            if (i2c_read_u8(dev, REG_STATUS2, &st2) == AS7341_OK && (st2 & STATUS2_AVALID)) {
-                // I dati HIGH sono pronti, li leggiamo al volo
-                if (i2c_read(dev, REG_CH0_DATA_L, raw, 12) == AS7341_OK) {
-                    for (int i = 0; i < 6; i++) {
-                        ch[i] = (uint16_t)raw[2*i] | ((uint16_t)raw[2*i + 1] << 8);
-                    }
-                    out->f5 = ch[0];
-                    out->f6 = ch[1];
-                    out->f7 = ch[2];
-                    out->f8 = ch[3];
-                }
-                // Disabilita la misura spettrale per bloccare l'hardware fino al prossimo start
-                reg_update(dev, REG_ENABLE, EN_SP_EN, 0);
-                
-                dev->async_state = AS7341_ASYNC_START_LOW; // Prepariamo la macchina per il prossimo giro
-                return true; // !!! GIRO COMPLETO EFFETTUATO, DATI AGGIORNATI !!!
-            } else if ((HAL_GetTick() - dev->async_timer) > DATA_READY_TIMEOUT) {
-                dev->async_state = AS7341_ASYNC_START_LOW;
-            }
-            break;
+    // 1. Check data validity first to prevent empty reads
+    uint8_t status2_reg = 0;
+    if (read_regs(dev, REG_STATUS2, &status2_reg, 1) != AS7341_OK) return false;
+    if (!(status2_reg & STATUS2_AVALID)) {
+        return false;
     }
 
-    return false; // Conversione ancora in corso
+    uint8_t raw_data[13];
+    uint16_t adc[6];
+
+    if (dev->state == AS7341_STATE_WAITING_LOW) {
+        /* --- CYCLE 1: LOW BANK DONE --- */
+        // Read 13 bytes starting from ASTATUS (0x94) to trigger latching
+        if (read_regs(dev, 0x94, raw_data, 13) == AS7341_OK) {
+            for (int i = 0; i < 6; i++) {
+                adc[i] = (uint16_t)raw_data[2 * i + 1] | ((uint16_t)raw_data[2 * i + 2] << 8);
+            }
+            out->f1    = adc[0];
+            out->f2    = adc[1];
+            out->f3    = adc[2];
+            out->f4    = adc[3];
+            out->clear = adc[4];
+            // adc[5] is ignored here because ADC5 is dedicated to the flicker engine
+        }
+        
+        /* Transition immediately to High Bank configuration */
+        dev->state = AS7341_STATE_WAITING_HIGH;
+
+        /* Clear the sensor's outstanding status flags to let the active-low INT pin go back high */
+        uint8_t status_reg = 0;
+        read_regs(dev, REG_STATUS, &status_reg, 1);
+        write_reg(dev, REG_STATUS, status_reg);
+
+        if (configure_smux_and_start(dev, smux_high_map) != AS7341_OK) {
+            dev->state = AS7341_STATE_IDLE; 
+        }
+        
+        return false; 
+    } 
+    else if (dev->state == AS7341_STATE_WAITING_HIGH) {
+        /* --- CYCLE 2: HIGH BANK DONE --- */
+        // Read 13 bytes starting from ASTATUS (0x94) to trigger latching
+        if (read_regs(dev, 0x94, raw_data, 13) == AS7341_OK) {
+            for (int i = 0; i < 6; i++) {
+                adc[i] = (uint16_t)raw_data[2 * i + 1] | ((uint16_t)raw_data[2 * i + 2] << 8);
+            }
+            out->f5  = adc[0];
+            out->f6  = adc[1];
+            out->f7  = adc[2];
+            out->f8  = adc[3];
+            out->nir = adc[4]; // Successfully extract your isolated NIR channel from ADC4!
+        }
+
+        if (dev->flicker_enabled) {
+            out->flicker = read_flicker_status(dev);
+        } else {
+            out->flicker = AS734_FLICKER_NONE;
+        }
+
+        /* CRUCIAL: Clear the sensor's outstanding status flags ONLY at the very end of Cycle 2 */
+        uint8_t status_reg = 0;
+        read_regs(dev, REG_STATUS, &status_reg, 1);
+        write_reg(dev, REG_STATUS, status_reg);
+
+        /* Stop conversion engines and reset state to IDLE */
+        uint8_t base_enable = EN_PON | (dev->flicker_enabled ? EN_FDEN : 0);
+        write_reg(dev, REG_ENABLE, base_enable);
+        dev->state = AS7341_STATE_IDLE;
+        
+        return true; /* Complete loop finished cleanly */
+    }
+
+    return false;
 }
