@@ -85,6 +85,7 @@ uint8_t usb_flag = 0;
 // Spectrometer data structures
 AS7341_Handle_t h_as7341;
 AS7341_SpectralData_t spectral_data;
+volatile bool spectral_data_ready = false;  // Flag set when a complete 11-channel read is finished
 
 // --- Buffer Audio DMA Circolare Hardware ---
 #define AUDIO_BLOCK_SIZE 2036
@@ -92,7 +93,6 @@ AS7341_SpectralData_t spectral_data;
 int16_t audio_buffer[AUDIO_BUF_SIZE];
 
 /// ----- NAND FLASH variables ----- ///
-
 uint8_t NAND_packet[4096] = {0};
 uint16_t sample = 0;
 uint16_t blocco_scritto = 0;
@@ -109,7 +109,6 @@ uint8_t data_letto[4096] = {0};
 int exit_flag = 0;
 
 volatile uint16_t packet_index = 0;
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -180,11 +179,10 @@ int main(void)
   find_bad_blocks(bad_blocks); // find bad_blocks and save them
 
   // Inizializzazione Spettrometro AS7341 sulla I2C3
-  if (AS7341_Init( & h_as7341, & hi2c3, 50, 999, AS7341_GAIN_8X) != AS7341_OK) {
+  if (AS7341_Init(&h_as7341, &hi2c3, 99, 599, AS7341_GAIN_8X, true) != AS7341_OK) {
       LED_On(LED_RED);
       Error_Handler();
   }
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -198,49 +196,63 @@ int main(void)
 		//LED_Toggle(LED_GREEN);
 		//HAL_Delay(1000);
 
-	  switch(current_state)
-	  {
-	  	  case STATE_IDLE:
-            LED_Off(LED_RED);
-            LED_Off(LED_GREEN);
-	  		// Check if a USB connection has been detected
-	  		if(!usb_flag)
-		    {
-	  			//MX_USB_Device_Init();
-		    }
-	  		else
-	  		{
-			   // Transition to the USB_CONNECTED state
-	  		   current_state = STATE_USB_CONNECTED;
-			   // Green LED on upon USB Connection
-			   LED_On(LED_GREEN);
-		    }
-	  		break;
+    //TODO remove after debug
+    usb_flag = 0;
+	  switch(current_state) {
+      case STATE_IDLE:
+        LED_Off(LED_RED);
+        LED_Off(LED_GREEN);
+        // Check if a USB connection has been detected
+        if(!usb_flag) {
+          //MX_USB_Device_Init();
+        } else {
+          // Transition to the USB_CONNECTED state
+          current_state = STATE_USB_CONNECTED;
+          // Green LED on upon USB Connection
+          LED_On(LED_GREEN);
+        }
+      break;
 
-	  	  case STATE_ACQUISITION:
-            LED_On(LED_RED);
-            LED_Off(LED_GREEN);
-            AS7341_ReadSpectral_NonBlocking(&h_as7341, &spectral_data);
-            // Microphone acquisition is handled by the DMA
+      case STATE_ACQUISITION:
+          LED_On(LED_RED);
+          LED_Off(LED_GREEN);
+          // If the background EXTI hardware completes the 2-cycle read sequence:
+          if (spectral_data_ready) {
+              spectral_data_ready = false;
+
+              // Build text logging data buffer stream string 
+              static char text_buffer[160];
+              snprintf(text_buffer, sizeof(text_buffer), 
+                        "[SPEC] F1-F4:%u,%u,%u,%u | F5-F8:%u,%u,%u,%u | C:%u | NIR:%u | FLK:%d\r\n",
+                        spectral_data.f1, spectral_data.f2, spectral_data.f3, spectral_data.f4,
+                        spectral_data.f5, spectral_data.f6, spectral_data.f7, spectral_data.f8,
+                        spectral_data.clear, spectral_data.nir, (int)spectral_data.flicker);
+              
+              CDC_Transmit_FS((uint8_t*)text_buffer, strlen(text_buffer));
+
+              // Instantly re-trigger the asynchronous background hardware engine for the next capture sequence
+              AS7341_StartRead(&h_as7341);
+          }
+          // Microphone acquisition is handled by the DMA
 			break;
 
-	  	  case STATE_USB_CONNECTED:
-            LED_Off(LED_RED);
-            LED_On(LED_GREEN);
-            HAL_Delay(10);
-	  		break;
+      case STATE_USB_CONNECTED:
+        LED_Off(LED_RED);
+        LED_On(LED_GREEN);
+        HAL_Delay(10);
+      break;
 
-	  	  case STATE_DOWNLOAD:
-            LED_On(LED_GREEN);
-            LED_On(LED_RED);
+      case STATE_DOWNLOAD:
+        LED_On(LED_GREEN);
+        LED_On(LED_RED);
 
-	  		  // This state manages reading data blocks and sending them via USB.
-	  		  // Once download is complete, the state returns to USB_CONNECTED.
-	  		  // Read data packets from memory
-	  		  read_memory_and_transmit();
+        // This state manages reading data blocks and sending them via USB.
+        // Once download is complete, the state returns to USB_CONNECTED.
+        // Read data packets from memory
+        read_memory_and_transmit();
 
-			 current_state = STATE_USB_CONNECTED;
-	  		 break;
+        current_state = STATE_USB_CONNECTED;
+      break;
 	  }
 
   }
@@ -766,11 +778,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(USER_BUTTON_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : MCU_I_O_2_Pin MCU_I_O_1_Pin */
-  GPIO_InitStruct.Pin = MCU_I_O_2_Pin|MCU_I_O_1_Pin;
+  /*Configure GPIO pin : MCU_I_O_2_Pin */
+  GPIO_InitStruct.Pin = MCU_I_O_2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(MCU_I_O_2_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : MCU_I_O_1_Pin */
+  GPIO_InitStruct.Pin = MCU_I_O_1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(MCU_I_O_1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : MCU_GREEN_LED_Pin MCU_RED_LED_Pin */
   GPIO_InitStruct.Pin = MCU_GREEN_LED_Pin|MCU_RED_LED_Pin;
@@ -823,6 +841,8 @@ void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
             Error_Handler();
         }
 				current_state = STATE_ACQUISITION;
+        spectral_data_ready = false;
+        AS7341_StartRead(&h_as7341); // Initial async trigger sequence launch
 			break;
 			case STATE_ACQUISITION:
 				current_state = STATE_IDLE;
@@ -840,13 +860,19 @@ void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin)
 	}
 }
 
-// Falling Edge when User Button is not pressed
-void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin)
-{
-	if(GPIO_Pin == USER_BUTTON_Pin)
-	{
+void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin) {
+  // Spectrometer Hardware Interrupt
+  if (GPIO_Pin == MCU_I_O_1_Pin) {
+      HAL_NVIC_DisableIRQ(MCU_I_O_1_EXTI_IRQn);
 
-	}
+      if (AS7341_IRQHandler(&h_as7341, &spectral_data)) {
+          // Evaluates true ONLY when Cycle 2 concludes cleanly
+          spectral_data_ready = true;
+      }
+
+      __HAL_GPIO_EXTI_CLEAR_IT(MCU_I_O_1_Pin); // Clear any pending ghost flags accrued during the write
+      HAL_NVIC_EnableIRQ(MCU_I_O_1_EXTI_IRQn);
+  }
 }
 
 void HAL_MDF_AcqHalfCpltCallback(MDF_HandleTypeDef *hmdf) {
