@@ -58,7 +58,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/USB_Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c
     ${CMAKE_CURRENT_SOURCE_DIR}/USB_Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c
     # Add user defined sources
-     ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/as7341.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/as7341.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Core/Src/features.c
 )
 
 # Add include paths

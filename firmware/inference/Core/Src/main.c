@@ -33,6 +33,7 @@
 #include "network.h"         // ST Edge-AI generated header
 #include "network_data.h"    // Contains weights definitions
 #include <math.h>
+#include "features.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,9 +43,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
-
-
+// --- ⚙️ ARBITRARY INFERENCE STRIDE CONFIGURATION ---
+#define INFERENCE_STRIDE_PACKETS   9  // 1 = Every 381ms, 3 = Every 1.1s, 9 = Non-overlapping
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -58,78 +58,60 @@ I2C_HandleTypeDef hi2c3;
 
 MDF_HandleTypeDef MdfHandle0;
 MDF_FilterConfigTypeDef MdfFilterConfig0;
+DMA_NodeTypeDef Node_GPDMA1_Channel0;
+DMA_QListTypeDef List_GPDMA1_Channel0;
 DMA_HandleTypeDef handle_GPDMA1_Channel0;
 
 SPI_HandleTypeDef hspi2;
 SPI_HandleTypeDef hspi3;
-
-TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart3;
 
 PCD_HandleTypeDef hpcd_USB_OTG_FS;
 
 /* USER CODE BEGIN PV */
-
-// --- AI Framework Handles & Buffers ---
+// --- AI Framework Handles & Buffers (RESTORED TO FIX COMPILATION ERRORS) ---
 static ai_handle network_instance = AI_HANDLE_NULL;
 
 #define ACTIVATION_BUF_SIZE AI_NETWORK_DATA_ACTIVATIONS_SIZE
-// 4-byte aligned internal activation buffer for INT8 execution execution
+// 4-byte aligned internal activation buffer required for NN layer execution
 static uint8_t activations_buffer[ACTIVATION_BUF_SIZE] __attribute__((aligned(4)));
 
 static ai_buffer ai_input[AI_NETWORK_IN_NUM];
 static ai_buffer ai_output[AI_NETWORK_OUT_NUM];
 
-// --- Accumulated Raw Data Shape Management ---
-#define NUM_ACCUMULATED_PACKETS  10
-#define AUDIO_SAMPLES_PER_PACKET 2034
-#define SPECTRAL_CHANNELS        10
+// --- Hardware Streaming Buffers ---
+int16_t audio_circular_buffer[AUDIO_CIRC_BUF_SIZE]; // Double DMA Ping-Pong buffer
 
-// Flattened float array matched to the neural network input layout (Size: 20350)
-static float nn_input_features[AI_NETWORK_IN_1_SIZE];
+// --- Raw Sliding Window Storage Arrays ---
+static int16_t audio_window_history[WINDOW_PACKET_COUNT][BLOCK_AUDIO_SAMPLES];
+static uint16_t spectro_window_history[WINDOW_PACKET_COUNT][SPECTRAL_CHANNELS];
+static AS7341_Flicker_t flicker_window_history[WINDOW_PACKET_COUNT]; // Aligned with updated struct type
+
+static int write_ptr = 0;
+static int blocks_accumulated = 0;
+static int stride_counter = 0;
+
+// Scratchpad buffer to piece together the continuous 3.43-second wave for processing
+static int16_t audio_processing_scratchpad[TOTAL_WINDOW_SAMPLES];
 
 // Output predictions buffer explicitly set to int8_t for the quantized output layer
 static int8_t nn_output_predictions[AI_NETWORK_OUT_1_SIZE];
+// Float array matched to your network's input features layout (Size: 41)
+static float nn_input_features[AI_NETWORK_IN_1_SIZE];
 
-// Accumulators for tracking the spectral averages
-static float spectral_accumulator[SPECTRAL_CHANNELS] = {0};
-static volatile uint8_t packet_counter = 0;
 static volatile uint8_t inference_ready_flag = 0;
+
+// Spectrometer data structures (Synchronized with data_logger)
+AS7341_Handle_t h_as7341;
+AS7341_SpectralData_t spectral_data;
+AS7341_SpectralData_t spectral_data_buffer;
+volatile bool spectral_data_ready = false;
 
 // --- Global Flags and Variables ---
 // Flag to indicate a USB connection event.
 // Set to 1 when a USB connection is detected.
 uint8_t usb_flag = 0;
-
-// Spectrometer data structures
-AS7341_Handle_t h_as7341;
-AS7341_SpectralData_t spectral_data;
-
-// --- Buffer Audio DMA Circolare Hardware ---
-int16_t audio_buffer[AUDIO_SAMPLES_PER_PACKET];
-
-/// ----- NAND FLASH variables ----- ///
-
-uint8_t NAND_packet[4096] = {0};
-uint16_t sample = 0;
-uint16_t blocco_scritto = 0;
-uint8_t pagina_scritta=0;
-uint16_t b = 0;
-
-read_address_t blocco;
-column_address_t colonna = 0;
-
-uint16_t bad_blocks[2048]={-1}; // bad blocks array for writing/reading
-uint8_t bad_blocks2[2048]={0}; // bad blocks array for erasing
-
-uint8_t data_letto[4096] = {0};
-int exit_flag = 0;
-
-// Timestamp variables //
-Time_Struct timestamp;
-uint16_t tim = 0;
-
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -141,11 +123,10 @@ static void MX_I2C3_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
 static void MX_MDF1_Init(void);
-static void MX_TIM2_Init(void);
 static void MX_SPI3_Init(void);
 static void MX_SPI2_Init(void);
 /* USER CODE BEGIN PFP */
-
+/* USER CODE BEGIN PFP */
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -219,37 +200,32 @@ int main(void)
   MX_USART3_UART_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_MDF1_Init();
-  MX_TIM2_Init();
   MX_SPI3_Init();
   MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
-  // Congela il TIM2 quando la CPU è in breakpoint di debug
-  __HAL_DBGMCU_FREEZE_TIM2();
-
-  // Inizializzazione USB
   MX_USB_Device_Init();
   HAL_Delay(1000);
-
-  spi_nand_init();
-  find_bad_blocks(bad_blocks); // find bad_blocks and save them
 
   // Initialize X-CUBE-AI model platform
   AI_Init();
 
-  // Inizializzazione Spettrometro AS7341 sulla I2C3
-  if (AS7341_Init(&h_as7341, &hi2c3, 29, 599, AS7341_GAIN_32X) != AS7341_OK) {
+  // Inizializzazione Spettrometro AS7341 (Updated layout matching main_datalogger.c)
+  if (AS7341_Init(&h_as7341, &hi2c3, 99, 599, AS7341_GAIN_8X, true) != AS7341_OK) {
       LED_On(LED_RED);
       Error_Handler();
   }
 
-  // Clear tracking configurations before booting cadence
-  packet_counter = 0;
-  inference_ready_flag = 0;
-  memset(spectral_accumulator, 0, sizeof(spectral_accumulator));
+  // Kick off initial asynchronous spectrometer read sequence launch
+  AS7341_StartRead(&h_as7341);
 
-  // Boot up the hardware interval clock cadence loop (e.g. fired every 500ms)
-  __HAL_TIM_SET_COUNTER(&htim2, 0);
-  if (HAL_TIM_Base_Start_IT(&htim2) != HAL_OK) {
+  // --- START CONTINUOUS CIRCULAR DMA AUDIO STREAM ---
+  MDF_DmaConfigTypeDef mdf_dma_config = {0};
+  mdf_dma_config.Address = (uint32_t)audio_circular_buffer;
+  mdf_dma_config.DataLength  = AUDIO_CIRC_BUF_SIZE * sizeof(int16_t);
+  mdf_dma_config.MsbOnly = ENABLE;
+
+  if (HAL_MDF_AcqStart_DMA(&MdfHandle0, &MdfFilterConfig0, &mdf_dma_config) != HAL_OK) {
+      LED_On(LED_RED);
       Error_Handler();
   }
   /* USER CODE END 2 */
@@ -261,21 +237,68 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    if (inference_ready_flag)
+if (inference_ready_flag)
     {
         inference_ready_flag = 0; 
 
-        // 1. Esegui l'inferenza sul blocco dati appena completato
+        // Runs your full 1-shot feature extraction and model execution
         Run_Inference();
 
-        // 2. Mostra il risultato sui LED
-        uint8_t winning_class = (nn_output_predictions[0] > nn_output_predictions[1]) ? 0 : 1;
-        if (winning_class) {
-            LED_Off(LED_RED);
-            LED_On(LED_GREEN);
-        } else {
-            LED_Off(LED_GREEN);
-            LED_On(LED_RED);
+        // Find the maximum probability across all 5 classes
+        int8_t max_probability = -128; // Smallest possible int8 value
+        uint8_t winning_class_idx = 0;
+
+        for (uint8_t i = 0; i < 5; i++) {
+            if (nn_output_predictions[i] > max_probability) {
+                max_probability = nn_output_predictions[i];
+                winning_class_idx = i;
+            }
+        }
+
+        // --- 🎯 NEW: Format and print predictions via USB VCP ---
+        char usb_tx_buffer[128];
+        const char* class_labels[5] = {
+            "UNDERGROUND", 
+            "OUTDOOR", 
+            "INDOOR_QUIET", 
+            "INDOOR_NORMAL", 
+            "COVERED_DARK"
+        };
+
+        // Convert the raw int8 logit [-128, 127] to a generic relative confidence score [0, 255]
+        uint16_t relative_score = (uint16_t)(max_probability + 128);
+
+        snprintf(usb_tx_buffer, sizeof(usb_tx_buffer), 
+                 "[INFERENCE] Winner: %s (Raw Value: %d, Rel Score: %u/255)\r\n", 
+                 class_labels[winning_class_idx], 
+                 max_probability, 
+                 relative_score);
+
+        // Transmit out the pipeline results
+        CDC_Transmit_FS((uint8_t*)usb_tx_buffer, strlen(usb_tx_buffer));
+
+        // Act on the winning index based on hardware LEDs as before:
+        switch (winning_class_idx) {
+            case 0: // UNDERGROUND
+                LED_Off(LED_RED);
+                LED_Off(LED_GREEN);
+                break;
+            case 1: // OUTDOOR
+                LED_Off(LED_RED);
+                LED_On(LED_GREEN);
+                break;
+            case 2: // INDOOR_QUIET
+                LED_On(LED_RED);
+                LED_Off(LED_GREEN);
+                break;
+            case 3: // INDOOR_NORMAL
+                LED_On(LED_RED);
+                LED_On(LED_GREEN);
+                break;
+            default: // COVERED_DARK
+                LED_Off(LED_RED);
+                LED_On(LED_GREEN);
+                break;
         }
     }
   }
@@ -630,51 +653,6 @@ static void MX_SPI3_Init(void)
 }
 
 /**
-  * @brief TIM2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM2_Init(void)
-{
-
-  /* USER CODE BEGIN TIM2_Init 0 */
-
-  /* USER CODE END TIM2_Init 0 */
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-
-  /* USER CODE BEGIN TIM2_Init 1 */
-
-  /* USER CODE END TIM2_Init 1 */
-  htim2.Instance = TIM2;
-  htim2.Init.Prescaler = 45000 - 1;
-  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 15999;
-  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM2_Init 2 */
-
-  /* USER CODE END TIM2_Init 2 */
-
-}
-
-/**
   * @brief USART3 Initialization Function
   * @param None
   * @retval None
@@ -823,11 +801,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
   HAL_GPIO_Init(USER_BUTTON_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : MCU_I_O_2_Pin MCU_I_O_1_Pin */
-  GPIO_InitStruct.Pin = MCU_I_O_2_Pin|MCU_I_O_1_Pin;
+  /*Configure GPIO pin : MCU_I_O_2_Pin */
+  GPIO_InitStruct.Pin = MCU_I_O_2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+  HAL_GPIO_Init(MCU_I_O_2_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : MCU_I_O_1_Pin */
+  GPIO_InitStruct.Pin = MCU_I_O_1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(MCU_I_O_1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : MCU_GREEN_LED_Pin MCU_RED_LED_Pin */
   GPIO_InitStruct.Pin = MCU_GREEN_LED_Pin|MCU_RED_LED_Pin;
@@ -859,107 +843,109 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 /**
-  * @brief  Hardware Cadence Timer (TIM2) Elapsed Period Callback
+  * @brief  Spectrometer Hardware Data Read Interrupt Callback
   */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-    if (htim->Instance == TIM2)
-    {
-        // Resettiamo i contatori per la nuova finestra di 5 secondi
-        packet_counter = 0;
-        memset(spectral_accumulator, 0, sizeof(spectral_accumulator));
+void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin) {
+    if (GPIO_Pin == MCU_I_O_1_Pin) {
+        HAL_NVIC_DisableIRQ(MCU_I_O_1_EXTI_IRQn);
 
-        // 1. Diamo il VIA alla lettura I2C in background.
-        // I dati NON sono pronti adesso, lo saranno tra qualche millisecondo.
-        AS7341_ReadSpectral_NonBlocking(&h_as7341, &spectral_data);
-
-        // 2. Fai partire la DMA One-Shot per il primo pacchetto audio
-        MDF_DmaConfigTypeDef mdf_dma_config = {0};
-        mdf_dma_config.Address = (uint32_t)audio_buffer;
-        mdf_dma_config.DataLength  = AUDIO_SAMPLES_PER_PACKET * sizeof(int16_t);
-        mdf_dma_config.MsbOnly = ENABLE;
-
-        if (HAL_MDF_AcqStart_DMA(&MdfHandle0, &MdfFilterConfig0, &mdf_dma_config) != HAL_OK) {
-            Error_Handler();
+        if (AS7341_IRQHandler(&h_as7341, &spectral_data)) {
+            // Evaluates true only when Cycle 2 concludes cleanly
+            spectral_data_buffer = spectral_data; 
+            spectral_data_ready = true;
+            
+            // FIX: Kick off the next asynchronous integration sweep immediately
+            AS7341_StartRead(&h_as7341);
         }
+
+        __HAL_GPIO_EXTI_CLEAR_IT(MCU_I_O_1_Pin);
+        HAL_NVIC_EnableIRQ(MCU_I_O_1_EXTI_IRQn);
     }
 }
 
 /**
-  * @brief  MDF Half Transfer Complete Callback
+  * @brief  Core ingestion routine for 381.4ms chunks.
+  * Reconstructs continuous streams and handles arbitrary sliding strides.
+  */
+void Ingest_Block_To_Sliding_Window(int16_t* raw_audio_source) {
+    // 1. Direct memory save into active rolling storage slot
+    memcpy(audio_window_history[write_ptr], raw_audio_source, BLOCK_AUDIO_SAMPLES * sizeof(int16_t));
+    
+    // Assign spectrometer channels (fallback to last if spectral_data_ready was false)
+    spectro_window_history[write_ptr][0] = spectral_data_buffer.f1;
+    spectro_window_history[write_ptr][1] = spectral_data_buffer.f2;
+    spectro_window_history[write_ptr][2] = spectral_data_buffer.f3;
+    spectro_window_history[write_ptr][3] = spectral_data_buffer.f4;
+    spectro_window_history[write_ptr][4] = spectral_data_buffer.f5;
+    spectro_window_history[write_ptr][5] = spectral_data_buffer.f6;
+    spectro_window_history[write_ptr][6] = spectral_data_buffer.f7;
+    spectro_window_history[write_ptr][7] = spectral_data_buffer.f8;
+    spectro_window_history[write_ptr][8] = spectral_data_buffer.clear;
+    spectro_window_history[write_ptr][9] = spectral_data_buffer.nir;
+    
+    // Aligned tracking using the background calculation engine result flag member
+    flicker_window_history[write_ptr] = spectral_data_buffer.flicker;
+    
+    // Consume spectrometer flag until hardware updates it again
+    spectral_data_ready = false;
+
+    // Advance circular ring write pointer indices
+    write_ptr = (write_ptr + 1) % WINDOW_PACKET_COUNT;
+    if (blocks_accumulated < WINDOW_PACKET_COUNT) {
+        blocks_accumulated++;
+    }
+    
+    stride_counter++;
+
+    // 2. Process window if buffer is fully primed and stride parameter is met
+    if (blocks_accumulated == WINDOW_PACKET_COUNT && stride_counter >= INFERENCE_STRIDE_PACKETS) {
+        stride_counter = 0; // Reset stride steps accumulator
+
+        // --- Reconstruct Continuous Chronological Audio Vector ---
+        int current_slot = write_ptr; // The oldest slot is exactly where write_ptr currently sits
+        for (int i = 0; i < WINDOW_PACKET_COUNT; i++) {
+            memcpy(&audio_processing_scratchpad[i * BLOCK_AUDIO_SAMPLES], 
+                   audio_window_history[current_slot], 
+                   BLOCK_AUDIO_SAMPLES * sizeof(int16_t));
+            current_slot = (current_slot + 1) % WINDOW_PACKET_COUNT;
+        }
+
+        // --- 🎯 FIXED: Unified Base Pointer Passing (No more manual pointer arithmetic offsets) ---
+        
+        // Fills indices 0 to 16
+        Extract_Spectro_Features_Window(spectro_window_history, nn_input_features);
+        
+        // Fills indices 17 to 22 
+        Extract_Flicker_Features_Window(flicker_window_history, WINDOW_PACKET_COUNT, nn_input_features);
+        
+        // Fills indices 23 to 40
+        Extract_Audio_Features_Window(audio_processing_scratchpad, TOTAL_WINDOW_SAMPLES, nn_input_features);
+        
+        // Normalize the final combined vector, then signal main thread execution loop
+        Apply_Normalization(nn_input_features);
+        inference_ready_flag = 1;
+    }
+}
+
+/**
+  * @brief  MDF Circular Buffer Half Transfer Callback (PING ready)
   */
 void HAL_MDF_AcqHalfCpltCallback(MDF_HandleTypeDef *hmdf) {
     if (hmdf->Instance == MDF1_Filter0) {
-        // Calcoliamo l'offset aggiungendo +10 (SPECTRAL_CHANNELS) per liberare la testa dell'array
-        uint32_t audio_slot_offset = SPECTRAL_CHANNELS + (packet_counter * AUDIO_SAMPLES_PER_PACKET);
-        uint32_t half_size = AUDIO_SAMPLES_PER_PACKET / 2;
-
-        // Copia la prima metà dei campioni audio spostata in avanti di 10 posizioni
-        for (uint32_t i = 0; i < half_size; i++) {
-            nn_input_features[audio_slot_offset + i] = (float)audio_buffer[i];
-        }
+        // First 6102 samples of the circular array are ready
+        Ingest_Block_To_Sliding_Window(&audio_circular_buffer[0]);
     }
 }
 
 /**
-  * @brief  MDF Full Transfer Complete Callback
+  * @brief  MDF Circular Buffer Full Transfer Complete Callback (PONG ready)
   */
 void HAL_MDF_AcqCpltCallback(MDF_HandleTypeDef *hmdf) {
     if (hmdf->Instance == MDF1_Filter0) {
-        HAL_MDF_AcqStop_DMA(&MdfHandle0);
-
-        // Calcoliamo lo stesso offset traslato di +10
-        uint32_t audio_slot_offset = SPECTRAL_CHANNELS + (packet_counter * AUDIO_SAMPLES_PER_PACKET);
-        uint32_t half_size = AUDIO_SAMPLES_PER_PACKET / 2;
-
-        // Copia la seconda metà dei dati appena acquisiti spostata in avanti di 10 posizioni
-        for (uint32_t i = half_size; i < AUDIO_SAMPLES_PER_PACKET; i++) {
-            nn_input_features[audio_slot_offset + i] = (float)audio_buffer[i];
-        }
-
-        // 1. ADESSO i dati avviati nel passo precedente sono pronti in memoria!
-        // Li accumuliamo in sicurezza nell'array per la media.
-        spectral_accumulator[0] += (float)spectral_data.f1;
-        spectral_accumulator[1] += (float)spectral_data.f2;
-        spectral_accumulator[2] += (float)spectral_data.f3;
-        spectral_accumulator[3] += (float)spectral_data.f4;
-        spectral_accumulator[4] += (float)spectral_data.f5;
-        spectral_accumulator[5] += (float)spectral_data.f6;
-        spectral_accumulator[6] += (float)spectral_data.f7;
-        spectral_accumulator[7] += (float)spectral_data.f8;
-        spectral_accumulator[8] += (float)spectral_data.clear;
-        spectral_accumulator[9] += (float)spectral_data.nir;
-
-        packet_counter++;
-
-        if (packet_counter >= NUM_ACCUMULATED_PACKETS) {
-            // Abbiamo tutti e 10 i pacchetti. 
-            // Inseriamo i 10 canali calcolati ALL'INIZIO (Indici da 0 a 9)
-            for (int ch = 0; ch < SPECTRAL_CHANNELS; ch++) {
-                nn_input_features[ch] = spectral_accumulator[ch] / (float)NUM_ACCUMULATED_PACKETS;
-            }
-
-            // Segnala al main loop che la finestra è pronta per l'inferenza
-            inference_ready_flag = 1; 
-        } else {
-            // Se mancano pacchetti, riavvia lo spettrometro in background e la DMA audio
-            AS7341_ReadSpectral_NonBlocking(&h_as7341, &spectral_data);
-
-            MDF_DmaConfigTypeDef mdf_dma_config = {0};
-            mdf_dma_config.Address = (uint32_t)audio_buffer;
-            mdf_dma_config.DataLength  = AUDIO_SAMPLES_PER_PACKET * sizeof(int16_t);
-            mdf_dma_config.MsbOnly = ENABLE;
-
-            if (HAL_MDF_AcqStart_DMA(&MdfHandle0, &MdfFilterConfig0, &mdf_dma_config) != HAL_OK) {
-                Error_Handler();
-            }
-        }
+        // Second 6102 samples of the circular array are ready
+        Ingest_Block_To_Sliding_Window(&audio_circular_buffer[BLOCK_AUDIO_SAMPLES]);
     }
 }
-
-/* Stubs for clean compilations without external references */
-void HAL_GPIO_EXTI_Rising_Callback(uint16_t GPIO_Pin) { (void)GPIO_Pin; }
-void HAL_GPIO_EXTI_Falling_Callback(uint16_t GPIO_Pin) { (void)GPIO_Pin; }
 /* USER CODE END 4 */
 
 /**
