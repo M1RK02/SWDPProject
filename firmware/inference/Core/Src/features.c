@@ -13,94 +13,94 @@
 // Scratchpad array for processing the full feature window
 static float32_t audio_float_scratch[TOTAL_WINDOW_SAMPLES];
 
-// --- ⚙️ ACTUAL PYTHON GENERATED MEAN VALUES FROM feature_normalization.json ---
+// --- ⚙️ PYTHON GENERATED MEAN VALUES FROM YOUR NEW feature_normalization.json ---
 static const float model_normalization_means[41] = {
-    6.261284828186035f,     // 0: lumos_total_log
-    5.287024021148682f,     // 1: lumos_clear_log
-    0.38745948672294617f,   // 2: lumos_nir_clear_ratio
-    0.12853290140628815f,   // 3: lumos_clear_std_ratio
-    0.1347494274377823f,    // 4: lumos_visible_std_ratio
-    0.26937344670295715f,   // 5: lumos_blue_red_ratio
-    0.791897714138031f,     // 6: lumos_green_red_ratio
-    0.21896223723888397f,   // 7: lumos_dark_fraction
+    7.036971092224121f,     // 0: lumos_total_log
+    6.060826778411865f,     // 1: lumos_clear_log
+    0.3882444500923157f,    // 2: lumos_nir_clear_ratio
+    0.13577739894390106f,   // 3: lumos_clear_std_ratio
+    0.1465160995721817f,    // 4: lumos_visible_std_ratio
+    0.32263490557670593f,   // 5: lumos_blue_red_ratio
+    0.8712995052337646f,    // 6: lumos_green_red_ratio
+    0.1805555522441864f,    // 7: lumos_dark_fraction
     0.0f,                   // 8: lumos_saturation_fraction
-    0.06574340909719467f,   // 9: lumos_f1_clear_ratio
-    0.09522206336259842f,   // 10: lumos_f2_clear_ratio
-    0.15613852441310883f,   // 11: lumos_f3_clear_ratio
-    0.13386811316013336f,   // 12: lumos_f4_clear_ratio
-    0.3147699534893036f,    // 13: lumos_f5_clear_ratio
-    0.3402782380580902f,    // 14: lumos_f6_clear_ratio
-    0.21239124238491058f,   // 15: lumos_f7_clear_ratio
-    0.23333987593650818f,   // 16: lumos_f8_clear_ratio
-    0.0008149959612637758f, // 17: flicker_sensor_off_fraction
-    0.7951643466949463f,    // 18: flicker_none_fraction
-    0.2040206491947174f,    // 19: flicker_100hz_fraction
+    0.07255682349205017f,   // 9: lumos_f1_clear_ratio
+    0.09373143315315247f,   // 10: lumos_f2_clear_ratio
+    0.15069536864757538f,   // 11: lumos_f3_clear_ratio
+    0.14161716401576996f,   // 12: lumos_f4_clear_ratio
+    0.29980331659317017f,   // 13: lumos_f5_clear_ratio
+    0.3225284218788147f,    // 14: lumos_f6_clear_ratio
+    0.1954755038022995f,    // 15: lumos_f7_clear_ratio
+    0.231620192527771f,     // 16: lumos_f8_clear_ratio
+    0.0008960573468357325f, // 17: flicker_sensor_off_fraction
+    0.8319893479347229f,    // 18: flicker_none_fraction
+    0.16711466014385223f,   // 19: flicker_100hz_fraction
     0.0f,                   // 20: flicker_120hz_fraction
-    0.2040206491947174f,    // 21: flicker_detected_fraction
+    0.16711466014385223f,   // 21: flicker_detected_fraction
     0.0f,                   // 22: flicker_unknown_fraction
-    0.02849610149860382f,   // 23: audio_rms
-    0.0014387154951691628f, // 24: audio_log_energy
-    0.02176782116293907f,   // 25: audio_abs_mean
-    0.02849576435983181f,   // 26: audio_std
-    0.15940487384796143f,   // 27: audio_peak
-    6.023674488067627f,     // 28: audio_crest_factor
-    0.24530065059661865f,   // 29: audio_silence_fraction
-    0.040955640375614166f,  // 30: audio_zero_crossing_rate
-    116.31025695800781f,    // 31: audio_low_high_ratio
-    959.8027954101562f,     // 32: audio_spectral_centroid_hz
-    9.165566444396973f,     // 33: audio_low_band_log
-    0.5133225917816162f,    // 34: audio_low_band_ratio
-    8.856313705444336f,     // 35: audio_mid_band_log
-    0.4342832565307617f,    // 36: audio_mid_band_ratio
-    6.1673455238342285f,    // 37: audio_high_band_log
-    0.04915877804160118f,   // 38: audio_high_band_ratio
-    3.098005771636963f,     // 39: audio_very_high_band_log
-    0.0032353370916098356f  // 40: audio_very_high_band_ratio
+    0.025723731145262718f,  // 23: audio_rms
+    0.0012567326193675399f, // 24: audio_log_energy
+    0.019379297271370888f,  // 25: audio_abs_mean
+    0.02572345919907093f,   // 26: audio_std
+    0.1488044559955597f,    // 27: audio_peak
+    6.208815097808838f,     // 28: audio_crest_factor
+    0.3029491901397705f,    // 29: audio_silence_fraction
+    0.04633596912026405f,   // 30: audio_zero_crossing_rate
+    102.21857452392578f,    // 31: audio_low_high_ratio
+    983.9729614257812f,     // 32: audio_spectral_centroid_hz
+    8.261835098266602f,     // 33: audio_low_band_log
+    0.5193198919296265f,    // 34: audio_low_band_ratio
+    7.930571556091309f,     // 35: audio_mid_band_log
+    0.42152172327041626f,   // 36: audio_mid_band_ratio
+    5.404937267303467f,     // 37: audio_high_band_log
+    0.055506929755210876f,  // 38: audio_high_band_ratio
+    2.484564781188965f,     // 39: audio_very_high_band_log
+    0.003651389619335532f   // 40: audio_very_high_band_ratio
 };
 
-// --- ⚙️ ACTUAL PYTHON GENERATED STANDARD DEVIATION VALUES FROM feature_normalization.json ---
+// --- ⚙️ PYTHON GENERATED STANDARD DEVIATION VALUES FROM YOUR NEW feature_normalization.json ---
 static const float model_normalization_stds[41] = {
-    3.0582730770111084f,   // 0: lumos_total_log
-    2.7367405891418457f,   // 1: lumos_clear_log
-    0.36162877082824707f,  // 2: lumos_nir_clear_ratio
-    0.24729187786579132f,  // 3: lumos_clear_std_ratio
-    0.23384395241737366f,  // 4: lumos_visible_std_ratio
-    0.17691883444786072f,  // 5: lumos_blue_red_ratio
-    0.48702681064605713f,  // 6: lumos_green_red_ratio
-    0.412811815738678f,    // 7: lumos_dark_fraction
+    3.2515289783477783f,   // 0: lumos_total_log
+    3.0041186809539795f,   // 1: lumos_clear_log
+    0.33099743723869324f,  // 2: lumos_nir_clear_ratio
+    0.23558606207370758f,  // 3: lumos_clear_std_ratio
+    0.23307962715625763f,  // 4: lumos_visible_std_ratio
+    0.21950657665729523f,  // 5: lumos_blue_red_ratio
+    0.5149194002151489f,   // 6: lumos_green_red_ratio
+    0.3840019404888153f,   // 7: lumos_dark_fraction
     1.0f,                  // 8: lumos_saturation_fraction
-    0.08030950278043747f,  // 9: lumos_f1_clear_ratio
-    0.09512348473072052f,  // 10: lumos_f2_clear_ratio
-    0.13650795817375183f,  // 11: lumos_f3_clear_ratio
-    0.14567534625530243f,  // 12: lumos_f4_clear_ratio
-    0.22072772681713104f,  // 13: lumos_f5_clear_ratio
-    0.23018866777420044f,  // 14: lumos_f6_clear_ratio
-    0.18775592744350433f,  // 15: lumos_f7_clear_ratio
-    0.1737399846315384f,   // 16: lumos_f8_clear_ratio
-    0.009481087327003479f, // 17: flicker_sensor_off_fraction
-    0.3863869309425354f,   // 18: flicker_none_fraction
-    0.38670122623443604f,  // 19: flicker_100hz_fraction
+    0.07713852822780609f,  // 9: lumos_f1_clear_ratio
+    0.08553877472877502f,  // 10: lumos_f2_clear_ratio
+    0.12276584655046463f,  // 11: lumos_f3_clear_ratio
+    0.13340643048286438f,  // 12: lumos_f4_clear_ratio
+    0.20601612329483032f,  // 13: lumos_f5_clear_ratio
+    0.21329164505004883f,  // 14: lumos_f6_clear_ratio
+    0.16852323710918427f,  // 15: lumos_f7_clear_ratio
+    0.16302961111068726f,  // 16: lumos_f8_clear_ratio
+    0.009937782771885395f, // 17: flicker_sensor_off_fraction
+    0.35691460967063904f,  // 18: flicker_none_fraction
+    0.3571954369544983f,   // 19: flicker_100hz_fraction
     1.0f,                  // 20: flicker_120hz_fraction
-    0.38670122623443604f,  // 21: flicker_detected_fraction
+    0.3571954369544983f,   // 21: flicker_detected_fraction
     1.0f,                  // 22: flicker_unknown_fraction
-    0.025143807753920555f, // 23: audio_rms
-    0.0029872418381273746f,// 24: audio_log_energy
-    0.019446400925517082f, // 25: audio_abs_mean
-    0.025143524631857872f, // 26: audio_std
-    0.14241459965705872f,  // 27: audio_peak
-    2.98909068107605f,     // 28: audio_crest_factor
-    0.14869262278079987f,  // 29: audio_silence_fraction
-    0.030030982568860054f, // 30: audio_zero_crossing_rate
-    255.53562927246094f,   // 31: audio_low_high_ratio
-    375.89459228515625f,   // 32: audio_spectral_centroid_hz
-    1.7730233669281006f,   // 33: audio_low_band_log
-    0.27855613827705383f,  // 34: audio_low_band_ratio
-    1.5847792625427246f,   // 35: audio_mid_band_log
-    0.25440531969070435f,  // 36: audio_mid_band_ratio
-    2.005514621734619f,    // 37: audio_high_band_log
-    0.06278987228870392f,  // 38: audio_high_band_ratio
-    1.9382314682006836f,   // 39: audio_very_high_band_log
-    0.00698096351698041f   // 40: audio_very_high_band_ratio
+    0.024492358788847923f, // 23: audio_rms
+    0.002842922229319811f, // 24: audio_log_energy
+    0.018791193142533302f, // 25: audio_abs_mean
+    0.02449207752943039f,  // 26: audio_std
+    0.14186252653598785f,  // 27: audio_peak
+    3.1990551948547363f,   // 28: audio_crest_factor
+    0.1961032748222351f,   // 29: audio_silence_fraction
+    0.030966104939579964f, // 30: audio_zero_crossing_rate
+    241.42538452148438f,   // 31: audio_low_high_ratio
+    375.9409484863281f,    // 32: audio_spectral_centroid_hz
+    1.7429242134094238f,   // 33: audio_low_band_log
+    0.26659905910491943f,  // 34: audio_low_band_ratio
+    1.6313564777374268f,   // 35: audio_mid_band_log
+    0.24183206260204315f,  // 36: audio_mid_band_ratio
+    1.9240217208862305f,   // 37: audio_high_band_log
+    0.07648996263742447f,  // 38: audio_high_band_ratio
+    1.7285667657852173f,   // 39: audio_very_high_band_log
+    0.007190889213234186f  // 40: audio_very_high_band_ratio
 };
 
 void Extract_Spectro_Features_Window(uint16_t spectro_hist[WINDOW_PACKET_COUNT][SPECTRAL_CHANNELS], float* feature_out_vec) {
