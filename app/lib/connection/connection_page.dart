@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:smart_wearables_app/connection/stream.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:smart_wearables_app/home_page.dart';
+import 'package:smart_wearables_app/lumos_page.dart';
 
 // --- BLE Service and Characteristic UUIDs ---
 // These are the specific addresses for the BLE device RN4871 (Microchip) on the board.
@@ -14,6 +14,9 @@ Uuid characteristicUuid = Uuid.parse(
 Uuid characteristicUuidTX = Uuid.parse(
   "49535343-8841-43F4-A8D4-ECBE34729BB3",
 ); // TX Characteristic
+
+Timer? _demoTimer;
+MyStream? _demoStream;
 
 // --- 1. Widget Definition ---
 class ConnectionPage extends StatefulWidget {
@@ -233,7 +236,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
     );
 
     // --- Packet Buffering Logic ---
-    const int fixedPacketLength = 20; // Our custom packet length (in bytes)
+    const int fixedPacketLength = 24; // Our custom packet length (in bytes)
     List<int> packetBuffer = []; // Temporary buffer
 
     flutterReactiveBle
@@ -294,7 +297,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
       context,
       MaterialPageRoute(
         builder: (context) =>
-            HomePage(title: "Sensors Data", stream: incomingBLEStream),
+            LumosPage(stream: incomingBLEStream),
       ),
     ).whenComplete(() => forceDisconnection());
   }
@@ -336,7 +339,55 @@ class _ConnectionPageState extends State<ConnectionPage> {
     }
   }
 
-  // --- 4. Building the UI (User Interface) ---
+  void _startDemoMode() {
+  _demoStream = MyStream();
+
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => LumosPage(stream: _demoStream!),
+    ),
+  ).whenComplete(() {
+    _demoTimer?.cancel();
+    _demoTimer = null;
+  });
+
+  int tick = 0;
+  _demoTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+    if (!mounted) {
+      timer.cancel();
+      return;
+    }
+    final label = tick % 5;
+    final base = [3000, 8000, 30000, 500, 12000][label];
+    final pkt = List<int>.filled(24, 0);
+    pkt[0] = 0x7B;
+    pkt[1] = 0x4C;
+    pkt[2] = label;
+    final channels = [
+      (base * 0.3).toInt(), (base * 0.5).toInt(),
+      (base * 0.7).toInt(), (base * 0.9).toInt(),
+      (base * 1.0).toInt(), (base * 0.8).toInt(),
+      (base * 0.6).toInt(), (base * 0.4).toInt(),
+      base, (base * 0.2).toInt(),
+    ];
+    for (int i = 0; i < 10; i++) {
+      final v = channels[i].clamp(0, 65535);
+      pkt[3 + i * 2]     = v & 0xFF;
+      pkt[3 + i * 2 + 1] = (v >> 8) & 0xFF;
+    }
+    pkt[23] = 0x7D;
+    _demoStream!.setNum(pkt);
+    tick++;
+  });
+  }
+
+  @override
+  void dispose() {
+    _demoTimer?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -346,25 +397,40 @@ class _ConnectionPageState extends State<ConnectionPage> {
             backgroundColor: Theme.of(context).colorScheme.inversePrimary,
             title: Text(widget.title),
           ),
-          body: RefreshIndicator(
-            onRefresh: () async {
-              return _startScan();
-            },
-            child: ListView.builder(
-              itemCount: foundBleDevicesFiltered.length,
-              itemBuilder: (context, index) => Card(
-                child: ListTile(
-                  dense: true,
-                  onTap: () {
-                    if (!connecting) {
-                      _startConnection(index);
-                    }
+          body: Column(
+            children: [
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    return _startScan();
                   },
-                  subtitle: Text(foundBleDevicesFiltered[index].id),
-                  title: Text("$index: ${foundBleDevicesFiltered[index].name}"),
+                  child: ListView.builder(
+                    itemCount: foundBleDevicesFiltered.length,
+                    itemBuilder: (context, index) => Card(
+                      child: ListTile(
+                        dense: true,
+                        onTap: () {
+                          if (!connecting) {
+                            _startConnection(index);
+                          }
+                        },
+                        subtitle: Text(foundBleDevicesFiltered[index].id),
+                        title: Text(
+                            "$index: ${foundBleDevicesFiltered[index].name}"),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-            ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: OutlinedButton.icon(
+                  onPressed: _startDemoMode,
+                  icon: const Icon(Icons.play_circle_outline),
+                  label: const Text('Demo mode (no hardware)'),
+                ),
+              ),
+            ],
           ),
         ),
 
