@@ -1,0 +1,280 @@
+{
+  "supported_labels": [
+    "UNDERGROUND",
+    "OUTDOOR",
+    "INDOOR_QUIET",
+    "INDOOR_NORMAL",
+    "COVERED_DARK"
+  ],
+  "labels": [
+    "UNDERGROUND",
+    "OUTDOOR",
+    "INDOOR_QUIET",
+    "INDOOR_NORMAL",
+    "COVERED_DARK"
+  ],
+  "feature_columns": [
+    "lumos_total_log",
+    "lumos_clear_log",
+    "lumos_nir_clear_ratio",
+    "lumos_clear_std_ratio",
+    "lumos_visible_std_ratio",
+    "lumos_blue_red_ratio",
+    "lumos_green_red_ratio",
+    "lumos_dark_fraction",
+    "lumos_saturation_fraction",
+    "lumos_f1_clear_ratio",
+    "lumos_f2_clear_ratio",
+    "lumos_f3_clear_ratio",
+    "lumos_f4_clear_ratio",
+    "lumos_f5_clear_ratio",
+    "lumos_f6_clear_ratio",
+    "lumos_f7_clear_ratio",
+    "lumos_f8_clear_ratio",
+    "flicker_sensor_off_fraction",
+    "flicker_none_fraction",
+    "flicker_100hz_fraction",
+    "flicker_120hz_fraction",
+    "flicker_detected_fraction",
+    "flicker_unknown_fraction",
+    "audio_rms",
+    "audio_log_energy",
+    "audio_abs_mean",
+    "audio_std",
+    "audio_peak",
+    "audio_crest_factor",
+    "audio_silence_fraction",
+    "audio_zero_crossing_rate",
+    "audio_low_high_ratio",
+    "audio_spectral_centroid_hz",
+    "audio_low_band_log",
+    "audio_low_band_ratio",
+    "audio_mid_band_log",
+    "audio_mid_band_ratio",
+    "audio_high_band_log",
+    "audio_high_band_ratio",
+    "audio_very_high_band_log",
+    "audio_very_high_band_ratio"
+  ],
+  "normalization": {
+    "mean": {
+      "lumos_total_log": 7.036971092224121,
+      "lumos_clear_log": 6.060826778411865,
+      "lumos_nir_clear_ratio": 0.3882444500923157,
+      "lumos_clear_std_ratio": 0.13577739894390106,
+      "lumos_visible_std_ratio": 0.1465160995721817,
+      "lumos_blue_red_ratio": 0.32263490557670593,
+      "lumos_green_red_ratio": 0.8712995052337646,
+      "lumos_dark_fraction": 0.1805555522441864,
+      "lumos_saturation_fraction": 0.0,
+      "lumos_f1_clear_ratio": 0.07255682349205017,
+      "lumos_f2_clear_ratio": 0.09373143315315247,
+      "lumos_f3_clear_ratio": 0.15069536864757538,
+      "lumos_f4_clear_ratio": 0.14161716401576996,
+      "lumos_f5_clear_ratio": 0.29980331659317017,
+      "lumos_f6_clear_ratio": 0.3225284218788147,
+      "lumos_f7_clear_ratio": 0.1954755038022995,
+      "lumos_f8_clear_ratio": 0.231620192527771,
+      "flicker_sensor_off_fraction": 0.0008960573468357325,
+      "flicker_none_fraction": 0.8319893479347229,
+      "flicker_100hz_fraction": 0.16711466014385223,
+      "flicker_120hz_fraction": 0.0,
+      "flicker_detected_fraction": 0.16711466014385223,
+      "flicker_unknown_fraction": 0.0,
+      "audio_rms": 0.025723731145262718,
+      "audio_log_energy": 0.0012567326193675399,
+      "audio_abs_mean": 0.019379297271370888,
+      "audio_std": 0.02572345919907093,
+      "audio_peak": 0.1488044559955597,
+      "audio_crest_factor": 6.208815097808838,
+      "audio_silence_fraction": 0.3029491901397705,
+      "audio_zero_crossing_rate": 0.04633596912026405,
+      "audio_low_high_ratio": 102.21857452392578,
+      "audio_spectral_centroid_hz": 983.9729614257812,
+      "audio_low_band_log": 8.261835098266602,
+      "audio_low_band_ratio": 0.5193198919296265,
+      "audio_mid_band_log": 7.930571556091309,
+      "audio_mid_band_ratio": 0.42152172327041626,
+      "audio_high_band_log": 5.404937267303467,
+      "audio_high_band_ratio": 0.055506929755210876,
+      "audio_very_high_band_log": 2.484564781188965,
+      "audio_very_high_band_ratio": 0.003651389619335532
+    },
+    "std": {
+      "lumos_total_log": 3.2515289783477783,
+      "lumos_clear_log": 3.0041186809539795,
+      "lumos_nir_clear_ratio": 0.33099743723869324,
+      "lumos_clear_std_ratio": 0.23558606207370758,
+      "lumos_visible_std_ratio": 0.23307962715625763,
+      "lumos_blue_red_ratio": 0.21950657665729523,
+      "lumos_green_red_ratio": 0.5149194002151489,
+      "lumos_dark_fraction": 0.3840019404888153,
+      "lumos_saturation_fraction": 1.0,
+      "lumos_f1_clear_ratio": 0.07713852822780609,
+      "lumos_f2_clear_ratio": 0.08553877472877502,
+      "lumos_f3_clear_ratio": 0.12276584655046463,
+      "lumos_f4_clear_ratio": 0.13340643048286438,
+      "lumos_f5_clear_ratio": 0.20601612329483032,
+      "lumos_f6_clear_ratio": 0.21329164505004883,
+      "lumos_f7_clear_ratio": 0.16852323710918427,
+      "lumos_f8_clear_ratio": 0.16302961111068726,
+      "flicker_sensor_off_fraction": 0.009937782771885395,
+      "flicker_none_fraction": 0.35691460967063904,
+      "flicker_100hz_fraction": 0.3571954369544983,
+      "flicker_120hz_fraction": 1.0,
+      "flicker_detected_fraction": 0.3571954369544983,
+      "flicker_unknown_fraction": 1.0,
+      "audio_rms": 0.024492358788847923,
+      "audio_log_energy": 0.002842922229319811,
+      "audio_abs_mean": 0.018791193142533302,
+      "audio_std": 0.02449207752943039,
+      "audio_peak": 0.14186252653598785,
+      "audio_crest_factor": 3.1990551948547363,
+      "audio_silence_fraction": 0.1961032748222351,
+      "audio_zero_crossing_rate": 0.030966104939579964,
+      "audio_low_high_ratio": 241.42538452148438,
+      "audio_spectral_centroid_hz": 375.9409484863281,
+      "audio_low_band_log": 1.7429242134094238,
+      "audio_low_band_ratio": 0.26659905910491943,
+      "audio_mid_band_log": 1.6313564777374268,
+      "audio_mid_band_ratio": 0.24183206260204315,
+      "audio_high_band_log": 1.9240217208862305,
+      "audio_high_band_ratio": 0.07648996263742447,
+      "audio_very_high_band_log": 1.7285667657852173,
+      "audio_very_high_band_ratio": 0.007190889213234186
+    }
+  },
+  "windowing": {
+    "window_packets": 9,
+    "split": "Stratified train_test_split by window",
+    "split_warning": "Only one recording is available for at least one class, so the split falls back to stratified windows. This verifies the pipeline, but it is not a robust scientific generalization test."
+  },
+  "model": {
+    "architecture": [
+      "Dense(32, relu)",
+      "Dense(16, relu)",
+      "Dense(5, softmax)"
+    ],
+    "input_dim": 41,
+    "output_dim": 5,
+    "epochs_trained": 37,
+    "sensors": [
+      "spectro",
+      "flicker",
+      "audio"
+    ]
+  },
+  "metrics": {
+    "accuracy": 1.0,
+    "macro_f1": 1.0,
+    "baseline_logistic_accuracy": 1.0,
+    "baseline_logistic_macro_f1": 1.0,
+    "classification_report": {
+      "UNDERGROUND": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 17.0
+      },
+      "OUTDOOR": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 27.0
+      },
+      "INDOOR_QUIET": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 23.0
+      },
+      "INDOOR_NORMAL": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 35.0
+      },
+      "COVERED_DARK": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 23.0
+      },
+      "accuracy": 1.0,
+      "macro avg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 125.0
+      },
+      "weighted avg": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1-score": 1.0,
+        "support": 125.0
+      }
+    }
+  },
+  "tflite": {
+    "path": "data/output/tinyml_context_model/tinyml_context_model_int8.tflite",
+    "size_bytes": 6000,
+    "input_shape": [
+      1,
+      41
+    ],
+    "output_shape": [
+      1,
+      5
+    ],
+    "input_quantization": {
+      "scale": 0.038736261427402496,
+      "zero_point": -49,
+      "dtype": "<class 'numpy.int8'>"
+    },
+    "output_quantization": {
+      "scale": 0.00390625,
+      "zero_point": -128,
+      "dtype": "<class 'numpy.int8'>"
+    }
+  },
+  "tflite_verification": {
+    "input_shape": [
+      1,
+      41
+    ],
+    "output_shape": [
+      1,
+      5
+    ],
+    "sample_output": [
+      127.0,
+      -128.0,
+      -128.0,
+      -128.0,
+      -128.0
+    ]
+  },
+  "class_counts": {
+    "INDOOR_NORMAL": 176,
+    "OUTDOOR": 134,
+    "INDOOR_QUIET": 114,
+    "COVERED_DARK": 112,
+    "UNDERGROUND": 85
+  },
+  "train_recordings": [
+    "InsideBag_dataset",
+    "OutsideSunShade_dataset",
+    "OutsideSunWalking_dataset",
+    "RoomTalking_dataset",
+    "StudyRoom_dataset",
+    "Underground_dataset"
+  ],
+  "test_recordings": [
+    "InsideBag_dataset",
+    "OutsideSunShade_dataset",
+    "OutsideSunWalking_dataset",
+    "RoomTalking_dataset",
+    "StudyRoom_dataset",
+    "Underground_dataset"
+  ]
+}

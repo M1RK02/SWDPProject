@@ -29,7 +29,7 @@ def receive_and_save_data(ser, bin_filename, packet_size=4096, max_packets=2048 
     print("📴 Serial COM Port Closed.")
 
 
-def process_audio_bin_file(bin_filename, csv_filename=None, wav_filename=None, npz_filename=None):
+def process_audio_bin_file(bin_filename, csv_filename=None, wav_filename=None, npz_filename=None, label_id=None):
     print("🧠 Processing audio and spectral binary file...")
 
     # --- 📐 REVISED 4096-BYTE PACKET LAYOUT ---
@@ -118,22 +118,60 @@ def process_audio_bin_file(bin_filename, csv_filename=None, wav_filename=None, n
         print(f"📄 Spectral and telemetry CSV generated: {csv_filename}")
 
     if npz_filename:
-        # Stack spectrometer channels into a 2D matrix (N_packets, 10)
-        spectro_matrix = np.column_stack((
-            packets["f1"], packets["f2"], packets["f3"], packets["f4"],
-            packets["f5"], packets["f6"], packets["f7"], packets["f8"],
-            packets["clear"], packets["nir"]
-        ))
+        total_packets = packets.size
+        num_windows = total_packets // 3
         
-        # Save compressed matrices along with telemetry fields
-        np.savez_compressed(
-            npz_filename, 
-            spectro=spectro_matrix, 
-            audio=packets["audio"],
-            flicker=packets["flickering_type"],
-            spec_flag=packets["spectral_flag"]
-        )
-        print(f"📦 NPZ Dataset generated: {npz_filename} (Shape Spectro: {spectro_matrix.shape}, Shape Audio: {packets['audio'].shape})")
+        if num_windows > 0:
+            # Reconstruct spectrometer raw columns to 2D
+            spectro_matrix_raw = np.column_stack((
+                packets["f1"], packets["f2"], packets["f3"], packets["f4"],
+                packets["f5"], packets["f6"], packets["f7"], packets["f8"],
+                packets["clear"], packets["nir"]
+            ))
+            
+            # Pre-allocate using strict target datatypes (<u2, <i2, <u4)
+            merged_spectro = np.zeros((num_windows, 10), dtype="<u2")
+            merged_audio = np.zeros((num_windows, 2034 * 3), dtype="<i2")
+            merged_flicker = np.zeros(num_windows, dtype="<u4")
+            
+            for i in range(num_windows):
+                start_idx = i * 3
+                end_idx = start_idx + 3
+                
+                # 1. Audio Concatenation
+                merged_audio[i] = packets["audio"][start_idx:end_idx].flatten()
+                
+                # 2. Window flags slicing
+                window_spectro = spectro_matrix_raw[start_idx:end_idx]
+                window_flicker = packets["flickering_type"][start_idx:end_idx]
+                window_flags = packets["spectral_flag"][start_idx:end_idx]
+                
+                valid_indices = np.where(window_flags > 0)[0]
+                
+                if len(valid_indices) >= 1:
+                    mean_vals = window_spectro[valid_indices].mean(axis=0)
+                    merged_spectro[i] = np.round(mean_vals).astype("<u2")
+                    merged_flicker[i] = window_flicker[valid_indices[-1]].astype("<u4")
+                else:
+                    merged_spectro[i] = window_spectro[-1].astype("<u2")
+                    merged_flicker[i] = window_flicker[-1].astype("<u4")
+            
+            # Prepare saving dict with optional label array
+            save_dict = {
+                "spectro": merged_spectro, 
+                "audio": merged_audio,
+                "flicker": merged_flicker
+            }
+            if label_id is not None:
+                save_dict["label"] = np.full((num_windows,), label_id, dtype="i1")
+
+            np.savez_compressed(npz_filename, **save_dict)
+            print(f"📦 Pipeline NPZ Dataset generated (3-Merged): {npz_filename} (Shape Spectro: {merged_spectro.shape}, Shape Audio: {merged_audio.shape}, Shape Flicker: {merged_flicker.shape}, Shape Label: {save_dict['label'].shape if label_id is not None else 'N/A'})")
+            if label_id is not None:
+                print(f"🏷️  Saved environment label ID array filled with: {label_id}")
+        else:
+            print("⚠️ Not enough packets to generate a single 3-packet merged NPZ window.")
+
 
     # --- DATA PLOTTING ---
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(15, 10))
@@ -169,10 +207,10 @@ def process_audio_bin_file(bin_filename, csv_filename=None, wav_filename=None, n
 
 
 def gui_select_com_and_folder():
-    """Opens a GUI to select COM port, target folder, and custom file name."""
+    """Opens a GUI to select COM port, environment label, target folder, and custom file name."""
     root = Tk()
     root.title("Data Logger - Configuration")
-    root.geometry("400x450")
+    root.geometry("400x530")
     root.resizable(False, False)
 
     # COM Port Selection
@@ -184,6 +222,14 @@ def gui_select_com_and_folder():
     com_box = ttk.Combobox(root, textvariable=com_var, values=ports, state="readonly", width=30)
     com_box.pack(pady=5)
     com_box.current(0)
+
+    # Environment Label Selection
+    Label(root, text="🏷️ Select environment label:", font=("Segoe UI", 10)).pack(pady=5)
+    label_var = StringVar()
+    labels = ["UNDERGROUND", "OUTDOOR", "INDOOR_QUIET", "INDOOR_NORMAL", "COVERED_DARK"]
+    label_box = ttk.Combobox(root, textvariable=label_var, values=labels, state="readonly", width=30)
+    label_box.pack(pady=5)
+    label_box.current(0)
 
     # Custom File Name Input
     Label(root, text="📝 Enter File Name (without extension):", font=("Segoe UI", 10)).pack(pady=5)
@@ -204,11 +250,17 @@ def gui_select_com_and_folder():
     Label(root, text="📁 Select Output Folder:", font=("Segoe UI", 10)).pack(pady=5)
     Button(root, text="Select folder...", command=browse_folder).pack()
     Label(root, textvariable=folder_var, fg="blue", wraplength=350).pack(pady=5)
+    final_label_id = [0]
 
     def confirm():
         if not folder_var.get() or "No" in com_var.get() or not filename_var.get().strip():
-            messagebox.showerror("Error", "Please fill in all fields (COM, File Name, Folder).")
+            messagebox.showerror("Error", "Please fill in all fields (COM, Label, File Name, Folder).")
             return
+        try:
+            final_label_id[0] = labels.index(label_var.get())
+        except ValueError:
+            final_label_id[0] = 0
+
         root.destroy()
 
     Button(root, text="✅ Confirm & Download", command=confirm, bg="#4CAF50", fg="white", font=("Segoe UI", 10, "bold")).pack(pady=20)
@@ -216,7 +268,8 @@ def gui_select_com_and_folder():
 
     # Sanitize spaces out of the filename string
     clean_filename = filename_var.get().strip().replace(" ", "_")
-    return com_var.get(), folder_var.get(), clean_filename
+
+    return com_var.get(), folder_var.get(), clean_filename, final_label_id[0]
 
 
 # ==============================
@@ -224,7 +277,7 @@ def gui_select_com_and_folder():
 # ==============================
 
 def main():
-    com_port, save_path, file_name = gui_select_com_and_folder()
+    com_port, save_path, file_name, label_id = gui_select_com_and_folder()
     if not com_port or not save_path or not file_name:
         print("❌ Application Stopped.")
         return
@@ -245,7 +298,7 @@ def main():
         print(f"⚠️ Serial Error: {e}")
         return
 
-    process_audio_bin_file(bin_filename, csv_filename, wav_filename, npz_filename)
+    process_audio_bin_file(bin_filename, csv_filename, wav_filename, npz_filename, label_id=label_id)
 
 
 # ==============================
