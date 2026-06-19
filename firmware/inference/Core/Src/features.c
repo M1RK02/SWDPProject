@@ -15,92 +15,92 @@ static float32_t audio_float_scratch[TOTAL_WINDOW_SAMPLES];
 
 // --- ⚙️ PYTHON GENERATED MEAN VALUES FROM YOUR NEW feature_normalization.json ---
 static const float model_normalization_means[41] = {
-    7.036971092224121f,     // 0: lumos_total_log
-    6.060826778411865f,     // 1: lumos_clear_log
-    0.3882444500923157f,    // 2: lumos_nir_clear_ratio
-    0.13577739894390106f,   // 3: lumos_clear_std_ratio
-    0.1465160995721817f,    // 4: lumos_visible_std_ratio
-    0.32263490557670593f,   // 5: lumos_blue_red_ratio
-    0.8712995052337646f,    // 6: lumos_green_red_ratio
-    0.1805555522441864f,    // 7: lumos_dark_fraction
-    0.0f,                   // 8: lumos_saturation_fraction
-    0.07255682349205017f,   // 9: lumos_f1_clear_ratio
-    0.09373143315315247f,   // 10: lumos_f2_clear_ratio
-    0.15069536864757538f,   // 11: lumos_f3_clear_ratio
-    0.14161716401576996f,   // 12: lumos_f4_clear_ratio
-    0.29980331659317017f,   // 13: lumos_f5_clear_ratio
-    0.3225284218788147f,    // 14: lumos_f6_clear_ratio
-    0.1954755038022995f,    // 15: lumos_f7_clear_ratio
-    0.231620192527771f,     // 16: lumos_f8_clear_ratio
-    0.0008960573468357325f, // 17: flicker_sensor_off_fraction
-    0.8319893479347229f,    // 18: flicker_none_fraction
-    0.16711466014385223f,   // 19: flicker_100hz_fraction
-    0.0f,                   // 20: flicker_120hz_fraction
-    0.16711466014385223f,   // 21: flicker_detected_fraction
-    0.0f,                   // 22: flicker_unknown_fraction
-    0.025723731145262718f,  // 23: audio_rms
-    0.0012567326193675399f, // 24: audio_log_energy
-    0.019379297271370888f,  // 25: audio_abs_mean
-    0.02572345919907093f,   // 26: audio_std
-    0.1488044559955597f,    // 27: audio_peak
-    6.208815097808838f,     // 28: audio_crest_factor
-    0.3029491901397705f,    // 29: audio_silence_fraction
-    0.04633596912026405f,   // 30: audio_zero_crossing_rate
-    102.21857452392578f,    // 31: audio_low_high_ratio
-    983.9729614257812f,     // 32: audio_spectral_centroid_hz
-    8.261835098266602f,     // 33: audio_low_band_log
-    0.5193198919296265f,    // 34: audio_low_band_ratio
-    7.930571556091309f,     // 35: audio_mid_band_log
-    0.42152172327041626f,   // 36: audio_mid_band_ratio
-    5.404937267303467f,     // 37: audio_high_band_log
-    0.055506929755210876f,  // 38: audio_high_band_ratio
-    2.484564781188965f,     // 39: audio_very_high_band_log
-    0.003651389619335532f   // 40: audio_very_high_band_ratio
+    7.7480731f,
+    6.76601028f,
+    0.443025351f,
+    0.153907344f,
+    0.177605703f,
+    0.386570096f,
+    0.928631723f,
+    0.131050006f,
+    0.0f,
+    0.0736622661f,
+    0.0958541557f,
+    0.139115587f,
+    0.147679314f,
+    0.270542741f,
+    0.292400032f,
+    0.181066647f,
+    0.223509654f,
+    0.00144717796f,
+    0.876989961f,
+    0.121562943f,
+    0.0f,
+    0.121562943f,
+    0.0f,
+    0.0230864864f,
+    0.000992636778f,
+    0.0172957685f,
+    0.0230862461f,
+    0.135541379f,
+    6.20670033f,
+    0.311448872f,
+    0.055741217f,
+    75.272049f,
+    1081.96887f,
+    8.1453352f,
+    0.511914313f,
+    7.85781336f,
+    0.411112189f,
+    5.63944483f,
+    0.0722501874f,
+    2.66789675f,
+    0.00472297054f
 };
 
 // --- ⚙️ PYTHON GENERATED STANDARD DEVIATION VALUES FROM YOUR NEW feature_normalization.json ---
 static const float model_normalization_stds[41] = {
-    3.2515289783477783f,   // 0: lumos_total_log
-    3.0041186809539795f,   // 1: lumos_clear_log
-    0.33099743723869324f,  // 2: lumos_nir_clear_ratio
-    0.23558606207370758f,  // 3: lumos_clear_std_ratio
-    0.23307962715625763f,  // 4: lumos_visible_std_ratio
-    0.21950657665729523f,  // 5: lumos_blue_red_ratio
-    0.5149194002151489f,   // 6: lumos_green_red_ratio
-    0.3840019404888153f,   // 7: lumos_dark_fraction
-    1.0f,                  // 8: lumos_saturation_fraction
-    0.07713852822780609f,  // 9: lumos_f1_clear_ratio
-    0.08553877472877502f,  // 10: lumos_f2_clear_ratio
-    0.12276584655046463f,  // 11: lumos_f3_clear_ratio
-    0.13340643048286438f,  // 12: lumos_f4_clear_ratio
-    0.20601612329483032f,  // 13: lumos_f5_clear_ratio
-    0.21329164505004883f,  // 14: lumos_f6_clear_ratio
-    0.16852323710918427f,  // 15: lumos_f7_clear_ratio
-    0.16302961111068726f,  // 16: lumos_f8_clear_ratio
-    0.009937782771885395f, // 17: flicker_sensor_off_fraction
-    0.35691460967063904f,  // 18: flicker_none_fraction
-    0.3571954369544983f,   // 19: flicker_100hz_fraction
-    1.0f,                  // 20: flicker_120hz_fraction
-    0.3571954369544983f,   // 21: flicker_detected_fraction
-    1.0f,                  // 22: flicker_unknown_fraction
-    0.024492358788847923f, // 23: audio_rms
-    0.002842922229319811f, // 24: audio_log_energy
-    0.018791193142533302f, // 25: audio_abs_mean
-    0.02449207752943039f,  // 26: audio_std
-    0.14186252653598785f,  // 27: audio_peak
-    3.1990551948547363f,   // 28: audio_crest_factor
-    0.1961032748222351f,   // 29: audio_silence_fraction
-    0.030966104939579964f, // 30: audio_zero_crossing_rate
-    241.42538452148438f,   // 31: audio_low_high_ratio
-    375.9409484863281f,    // 32: audio_spectral_centroid_hz
-    1.7429242134094238f,   // 33: audio_low_band_log
-    0.26659905910491943f,  // 34: audio_low_band_ratio
-    1.6313564777374268f,   // 35: audio_mid_band_log
-    0.24183206260204315f,  // 36: audio_mid_band_ratio
-    1.9240217208862305f,   // 37: audio_high_band_log
-    0.07648996263742447f,  // 38: audio_high_band_ratio
-    1.7285667657852173f,   // 39: audio_very_high_band_log
-    0.007190889213234186f  // 40: audio_very_high_band_ratio
+    3.04983139f,
+    2.85226345f,
+    0.319931597f,
+    0.224971205f,
+    0.238588512f,
+    0.234595254f,
+    0.472528845f,
+    0.336924732f,
+    1.0f,
+    0.075584814f,
+    0.0813960135f,
+    0.119588569f,
+    0.128144234f,
+    0.194127649f,
+    0.200732604f,
+    0.15868853f,
+    0.157251239f,
+    0.0125977248f,
+    0.313987881f,
+    0.31429553f,
+    1.0f,
+    0.31429553f,
+    1.0f,
+    0.0215211809f,
+    0.00244961074f,
+    0.0164556224f,
+    0.0215209108f,
+    0.125140756f,
+    3.02142406f,
+    0.184148282f,
+    0.0393982865f,
+    208.085693f,
+    397.168671f,
+    1.65522683f,
+    0.250218689f,
+    1.5984894f,
+    0.22157225f,
+    1.94542348f,
+    0.0923911929f,
+    1.68154514f,
+    0.0107196448f
 };
 
 void Extract_Spectro_Features_Window(uint16_t spectro_hist[WINDOW_PACKET_COUNT][SPECTRAL_CHANNELS], float* feature_out_vec) {

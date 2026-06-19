@@ -1,0 +1,16 @@
+{
+  "labels": [
+    "UNDERGROUND",
+    "OUTDOOR",
+    "INDOOR_QUIET",
+    "INDOOR_NORMAL",
+    "COVERED_DARK"
+  ],
+  "label_to_index": {
+    "UNDERGROUND": 0,
+    "OUTDOOR": 1,
+    "INDOOR_QUIET": 2,
+    "INDOOR_NORMAL": 3,
+    "COVERED_DARK": 4
+  }
+}
