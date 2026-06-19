@@ -205,11 +205,14 @@ int main(void)
   MX_SPI3_Init();
   MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
+  BLE_Initialize();
   MX_USB_Device_Init();
   HAL_Delay(1000);
 
   // Initialize X-CUBE-AI model platform
   AI_Init();
+
+  
 
   // Inizializzazione Spettrometro AS7341 (Updated layout matching main_datalogger.c)
   if (AS7341_Init(&h_as7341, &hi2c3, 99, 599, AS7341_GAIN_8X, true) != AS7341_OK) {
@@ -259,17 +262,22 @@ if (inference_ready_flag)
 
         // --- 🎯 NEW: Format and print predictions via USB VCP ---
         char usb_tx_buffer[128];
-        const char* class_labels[5] = {
+        
+        /*
+        const char* class_labels[6] = {
             "UNDERGROUND", 
             "OUTDOOR", 
             "INDOOR_QUIET", 
             "INDOOR_NORMAL", 
-            "COVERED_DARK"
+            "COVERED_DARK",
+            "UNKNOWN"
         };
+        */
 
         // Convert the raw int8 logit [-128, 127] to a generic relative confidence score [0, 255]
         uint16_t relative_score = (uint16_t)(max_probability + 128);
 
+        /*
         snprintf(usb_tx_buffer, sizeof(usb_tx_buffer), 
                  "[INFERENCE] Winner: %s (Raw Value: %d, Rel Score: %u/255)\r\n", 
                  class_labels[winning_class_idx], 
@@ -278,6 +286,10 @@ if (inference_ready_flag)
 
         // Transmit out the pipeline results
         CDC_Transmit_FS((uint8_t*)usb_tx_buffer, strlen(usb_tx_buffer));
+        */
+
+        //SEND PACKET THERE
+        BLE_SendLumosPacket((uint8_t)winning_class_idx, &spectral_data_buffer);
 
         // Act on the winning index based on hardware LEDs as before:
         switch (winning_class_idx) {
