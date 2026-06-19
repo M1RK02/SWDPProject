@@ -939,9 +939,9 @@ void Ingest_Block_To_Sliding_Window(int16_t* raw_audio_source) {
         Apply_Normalization(nn_input_features_float);
         
         // Quantize the float features to int8 for the quantized model input
-        // Using scale 0.09437471628189087f and zero-point -95
+        // Using scale 0.057999223470687866f and zero-point -83
         for (int i = 0; i < AI_NETWORK_IN_1_SIZE; i++) {
-            float q_val = roundf(nn_input_features_float[i] / 0.09437471628189087f) - 95.0f;
+            float q_val = roundf(nn_input_features_float[i] / 0.057999223470687866f) - 83.0f;
             if (q_val < -128.0f) q_val = -128.0f;
             if (q_val > 127.0f) q_val = 127.0f;
             nn_input_features[i] = (int8_t)q_val;
