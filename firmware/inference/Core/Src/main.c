@@ -97,8 +97,10 @@ static int16_t audio_processing_scratchpad[TOTAL_WINDOW_SAMPLES];
 
 // Output predictions buffer explicitly set to int8_t for the quantized output layer
 static int8_t nn_output_predictions[AI_NETWORK_OUT_1_SIZE];
-// Float array matched to your network's input features layout (Size: 41)
-static float nn_input_features[AI_NETWORK_IN_1_SIZE];
+// Quantized input features array for X-CUBE-AI model (Size: 41)
+static int8_t nn_input_features[AI_NETWORK_IN_1_SIZE];
+// Temporary float array for feature extraction and normalization (Size: 41)
+static float nn_input_features_float[AI_NETWORK_IN_1_SIZE];
 
 static volatile uint8_t inference_ready_flag = 0;
 
@@ -913,16 +915,26 @@ void Ingest_Block_To_Sliding_Window(int16_t* raw_audio_source) {
         // --- 🎯 FIXED: Unified Base Pointer Passing (No more manual pointer arithmetic offsets) ---
         
         // Fills indices 0 to 16
-        Extract_Spectro_Features_Window(spectro_window_history, nn_input_features);
+        Extract_Spectro_Features_Window(spectro_window_history, nn_input_features_float);
         
         // Fills indices 17 to 22 
-        Extract_Flicker_Features_Window(flicker_window_history, WINDOW_PACKET_COUNT, nn_input_features);
+        Extract_Flicker_Features_Window(flicker_window_history, WINDOW_PACKET_COUNT, nn_input_features_float);
         
         // Fills indices 23 to 40
-        Extract_Audio_Features_Window(audio_processing_scratchpad, TOTAL_WINDOW_SAMPLES, nn_input_features);
+        Extract_Audio_Features_Window(audio_processing_scratchpad, TOTAL_WINDOW_SAMPLES, nn_input_features_float);
         
-        // Normalize the final combined vector, then signal main thread execution loop
-        Apply_Normalization(nn_input_features);
+        // Normalize the final combined vector
+        Apply_Normalization(nn_input_features_float);
+        
+        // Quantize the float features to int8 for the quantized model input
+        // Using scale 0.0387362614f and zero-point -49
+        for (int i = 0; i < AI_NETWORK_IN_1_SIZE; i++) {
+            float q_val = roundf(nn_input_features_float[i] / 0.0387362614f) - 49.0f;
+            if (q_val < -128.0f) q_val = -128.0f;
+            if (q_val > 127.0f) q_val = 127.0f;
+            nn_input_features[i] = (int8_t)q_val;
+        }
+        
         inference_ready_flag = 1;
     }
 }

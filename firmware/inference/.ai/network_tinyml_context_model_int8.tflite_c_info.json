@@ -45,14 +45,14 @@
           -128
         ],
         "scales": [
-          0.02505643665790558
+          0.03976157307624817
         ]
       },
       "is_param": false,
       "mpool_id": 0,
       "name": "gemm_0_output_array",
       "nbits": 8,
-      "offset_start": 520,
+      "offset_start": 24,
       "qmn": {},
       "shape": [
         32
@@ -79,7 +79,7 @@
       "mpool_id": 0,
       "name": "gemm_0_scratch0_array",
       "nbits": 16,
-      "offset_start": 552,
+      "offset_start": 56,
       "qmn": {},
       "shape": [
         1,
@@ -144,38 +144,38 @@
           0
         ],
         "scales": [
-          0.0032014106400310993,
-          0.003070445265620947,
-          0.002311729360371828,
-          0.0034010345116257668,
-          0.0024313798639923334,
-          0.002717933151870966,
-          0.0033099816646426916,
-          0.0033919878769665956,
-          0.003249948611482978,
-          0.0023444113321602345,
-          0.0023895991034805775,
-          0.0023680669255554676,
-          0.0030239501502364874,
-          0.003069430822506547,
-          0.0031683004926890135,
-          0.003450695425271988,
-          0.0030471952632069588,
-          0.0027008692268282175,
-          0.0022912193089723587,
-          0.0030222998466342688,
-          0.003271754365414381,
-          0.0029351064004004,
-          0.00312817539088428,
-          0.002905698027461767,
-          0.0036805765703320503,
-          0.002836240455508232,
-          0.002748010912910104,
-          0.002885451540350914,
-          0.003063404466956854,
-          0.0028774896636605263,
-          0.003466585651040077,
-          0.0027647640090435743
+          0.004259399138391018,
+          0.003451606258749962,
+          0.003003812162205577,
+          0.003932344261556864,
+          0.00311638112179935,
+          0.0035233849193900824,
+          0.004723724443465471,
+          0.003461647080257535,
+          0.0027709619607776403,
+          0.0037896139547228813,
+          0.002219234826043248,
+          0.00415060855448246,
+          0.0040586236864328384,
+          0.00291234627366066,
+          0.0032663019374012947,
+          0.002981427824124694,
+          0.0035655794199556112,
+          0.003911727108061314,
+          0.0029205968603491783,
+          0.0031283388379961252,
+          0.0038157503586262465,
+          0.0028979547787457705,
+          0.003843952203169465,
+          0.0033484301529824734,
+          0.003698564600199461,
+          0.002090582624077797,
+          0.0032266280613839626,
+          0.0027423512656241655,
+          0.0020861909724771976,
+          0.0031989102717489004,
+          0.003160052001476288,
+          0.003383110975846648
         ]
       },
       "is_param": true,
@@ -239,14 +239,14 @@
           -128
         ],
         "scales": [
-          0.02981637418270111
+          0.05832820013165474
         ]
       },
       "is_param": false,
       "mpool_id": 0,
       "name": "gemm_1_output_array",
       "nbits": 8,
-      "offset_start": 776,
+      "offset_start": 280,
       "qmn": {},
       "shape": [
         16
@@ -273,7 +273,7 @@
       "mpool_id": 0,
       "name": "gemm_1_scratch0_array",
       "nbits": 16,
-      "offset_start": 552,
+      "offset_start": 56,
       "qmn": {},
       "shape": [
         1,
@@ -322,22 +322,22 @@
           0
         ],
         "scales": [
-          0.0033903394360095263,
-          0.002657915698364377,
-          0.0029573787469416857,
-          0.004071732517331839,
-          0.0039594657719135284,
-          0.0031043505296111107,
-          0.0036673566792160273,
-          0.003496142104268074,
-          0.0032172289211302996,
-          0.0035518119111657143,
-          0.003358294488862157,
-          0.0030464795418083668,
-          0.003469966584816575,
-          0.00369662931188941,
-          0.003326192032545805,
-          0.0032552804332226515
+          0.00408769678324461,
+          0.0038468106649816036,
+          0.002823979826644063,
+          0.004683999810367823,
+          0.003899775445461273,
+          0.004538963083177805,
+          0.0040193279273808,
+          0.00433763163164258,
+          0.005050945095717907,
+          0.003921230789273977,
+          0.004817713052034378,
+          0.003967802040278912,
+          0.0035322210751473904,
+          0.005068263038992882,
+          0.0033443872816860676,
+          0.004712005145847797
         ]
       },
       "is_param": true,
@@ -398,17 +398,17 @@
       "intq": {
         "axis": 0,
         "offsets": [
-          3
+          -2
         ],
         "scales": [
-          0.07307854294776917
+          0.14396390318870544
         ]
       },
       "is_param": false,
       "mpool_id": 0,
       "name": "gemm_2_output_array",
       "nbits": 8,
-      "offset_start": 992,
+      "offset_start": 496,
       "qmn": {},
       "shape": [
         5
@@ -435,7 +435,7 @@
       "mpool_id": 0,
       "name": "gemm_2_scratch0_array",
       "nbits": 16,
-      "offset_start": 520,
+      "offset_start": 24,
       "qmn": {},
       "shape": [
         1,
@@ -473,11 +473,11 @@
           0
         ],
         "scales": [
-          0.005559441167861223,
-          0.004254207015037537,
-          0.0049261124804615974,
-          0.005121572874486446,
-          0.005121967289596796
+          0.006878597661852837,
+          0.006168997380882502,
+          0.0065617612563073635,
+          0.006481637712568045,
+          0.006849766243249178
         ]
       },
       "is_param": true,
@@ -521,7 +521,7 @@
       "mpool_id": 0,
       "name": "nl_3_output_array",
       "nbits": 8,
-      "offset_start": 992,
+      "offset_start": 496,
       "qmn": {},
       "shape": [
         5
@@ -553,7 +553,7 @@
       "shape": [
         1,
         1,
-        248,
+        124,
         1
       ],
       "shape_map": [
@@ -562,7 +562,7 @@
         "CH",
         "CH_IN"
       ],
-      "size_bytes": 992
+      "size_bytes": 496
     },
     {
       "alignment": 4,
@@ -589,7 +589,7 @@
       "mpool_id": 0,
       "name": "serving_default_context_features0_output_array",
       "nbits": 8,
-      "offset_start": 956,
+      "offset_start": 460,
       "qmn": {},
       "shape": [
         41
@@ -602,44 +602,44 @@
   ],
   "environment": {
     "generated_model": {
-      "generated_time": "2026-06-18T18:41:35+0200",
+      "generated_time": "2026-06-19T10:47:19+0200",
       "model_files": [
         {
           "name": "network_data_params.h",
-          "signature": "0x9ce24477b8a9031efe981075dee3b170"
+          "signature": "0x35da2a66cf8b7e66086b6b0a7165ded5"
         },
         {
           "name": "network_data_params.c",
-          "signature": "0x0fbdf6ff44695f7440bb6eca7bcd0aec"
+          "signature": "0xa722c20db3eabcfb181d0245901b6357"
         },
         {
           "name": "network_data.h",
-          "signature": "0x570840bc279eb5c2c9fa910db9a9bf52"
+          "signature": "0xc5799b8aa331ee5bee85c8e583499c8d"
         },
         {
           "name": "network_data.c",
-          "signature": "0x099ccaac614cdc7c2c0fdaa2b95eebe5"
+          "signature": "0x8f9722897d096747eade8e736cd56858"
         },
         {
           "name": "network_config.h",
-          "signature": "0xb7b17b9f3d1cacc88be632139d7854ae"
+          "signature": "0x2c317a20f7c06983d7b86f8a663e8aef"
         },
         {
           "name": "network.h",
-          "signature": "0x4e78f2c4855a23630873d55ac12b2d12"
+          "signature": "0x91d9b191a77d23bf7892bcdcc659d526"
         },
         {
           "name": "network.c",
-          "signature": "0xb3684e0e28496fdad3dd3fdb822bd759"
+          "signature": "0xac566ba392d3eca8146a73622b240d1a"
         }
       ],
       "name": "network"
     },
-    "network_signature": "0xeb30d6c7572fc90e",
+    "network_signature": "0x7416ecb5f273443b",
     "test_name": "",
     "tools": [
       {
-        "arguments": "generate --target stm32u5 --name network -m /Users/mirko/Developer/SWDPProject/pipeline/data/output/tinyml_context_model/tinyml_context_model_int8.tflite --compression none --verbosity 1 --workspace /var/folders/p8/f0ql1fmx0yqbsmkfmx969hpm0000gn/T/mxAI_workspace877820232964161955191098159180767 --output /Users/mirko/.stm32cubemx/network_output",
+        "arguments": "generate --target stm32u5 --name network -m /Users/mirko/Developer/SWDPProject/pipeline/output/tinyml_context_model/tinyml_context_model_int8.tflite --compression none --verbosity 1 --workspace /var/folders/p8/f0ql1fmx0yqbsmkfmx969hpm0000gn/T/mxAI_workspace887082096454110810486259543926631 --output /Users/mirko/.stm32cubemx/network_output",
         "environment": [
           "STATS_TYPE=X-CUBE-AI"
         ],
@@ -647,7 +647,7 @@
           "model_files": [
             {
               "name": "tinyml_context_model_int8.tflite",
-              "signature": "0x0d415474bacf8fbeda0e976c23beb354"
+              "signature": "0x9c182c144f5a78105443ffc84d5188ec"
             }
           ],
           "n_params": 1957,
@@ -805,7 +805,7 @@
             "nonlinearity": "softmax",
             "orig_axis": "-1",
             "param_fmt": "(SIGNED, 32 bit, C Size: 32 bits)",
-            "params": "[1255479808, 23, -248]"
+            "params": "[1236640512, 24, -124]"
           },
           "description": "Nonlinearity",
           "id": 14,
@@ -887,7 +887,7 @@
   ],
   "json_schema_version": "2.0",
   "memory_footprint": {
-    "activations": 1000,
+    "activations": 504,
     "io": [
       0,
       0
@@ -927,7 +927,7 @@
       "rights": "ACC_WRITE",
       "size_bytes": -1,
       "subpools": [],
-      "used_size_bytes": 1000,
+      "used_size_bytes": 504,
       "user_allocated": false,
       "virtual": false
     },

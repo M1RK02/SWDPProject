@@ -157,7 +157,6 @@
     ],
     "input_dim": 41,
     "output_dim": 5,
-    "epochs_trained": 37,
     "sensors": [
       "spectro",
       "flicker",
@@ -166,57 +165,10 @@
   },
   "metrics": {
     "accuracy": 1.0,
-    "macro_f1": 1.0,
-    "baseline_logistic_accuracy": 1.0,
-    "baseline_logistic_macro_f1": 1.0,
-    "classification_report": {
-      "UNDERGROUND": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1-score": 1.0,
-        "support": 17.0
-      },
-      "OUTDOOR": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1-score": 1.0,
-        "support": 27.0
-      },
-      "INDOOR_QUIET": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1-score": 1.0,
-        "support": 23.0
-      },
-      "INDOOR_NORMAL": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1-score": 1.0,
-        "support": 35.0
-      },
-      "COVERED_DARK": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1-score": 1.0,
-        "support": 23.0
-      },
-      "accuracy": 1.0,
-      "macro avg": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1-score": 1.0,
-        "support": 125.0
-      },
-      "weighted avg": {
-        "precision": 1.0,
-        "recall": 1.0,
-        "f1-score": 1.0,
-        "support": 125.0
-      }
-    }
+    "macro_f1": 1.0
   },
   "tflite": {
-    "path": "data/output/tinyml_context_model/tinyml_context_model_int8.tflite",
+    "path": "output/tinyml_context_model/tinyml_context_model_int8.tflite",
     "size_bytes": 6000,
     "input_shape": [
       1,
@@ -236,45 +188,5 @@
       "zero_point": -128,
       "dtype": "<class 'numpy.int8'>"
     }
-  },
-  "tflite_verification": {
-    "input_shape": [
-      1,
-      41
-    ],
-    "output_shape": [
-      1,
-      5
-    ],
-    "sample_output": [
-      127.0,
-      -128.0,
-      -128.0,
-      -128.0,
-      -128.0
-    ]
-  },
-  "class_counts": {
-    "INDOOR_NORMAL": 176,
-    "OUTDOOR": 134,
-    "INDOOR_QUIET": 114,
-    "COVERED_DARK": 112,
-    "UNDERGROUND": 85
-  },
-  "train_recordings": [
-    "InsideBag_dataset",
-    "OutsideSunShade_dataset",
-    "OutsideSunWalking_dataset",
-    "RoomTalking_dataset",
-    "StudyRoom_dataset",
-    "Underground_dataset"
-  ],
-  "test_recordings": [
-    "InsideBag_dataset",
-    "OutsideSunShade_dataset",
-    "OutsideSunWalking_dataset",
-    "RoomTalking_dataset",
-    "StudyRoom_dataset",
-    "Underground_dataset"
-  ]
+  }
 }
