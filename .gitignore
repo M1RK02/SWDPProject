@@ -22,6 +22,7 @@ $RECYCLE.BIN/
 *.code-workspace
 .history/
 .ionide/
+AGENTS.md
 
 # ==========================================
 # 2. STM32 / Embedded Compiler Outputs
