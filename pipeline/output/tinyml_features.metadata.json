@@ -64,12 +64,12 @@
     "audio_very_high_band_log",
     "audio_very_high_band_ratio"
   ],
-  "rows": 864,
-  "recordings": 8,
+  "rows": 1178,
+  "recordings": 11,
   "class_counts": {
+    "INDOOR_NORMAL": 412,
     "OUTDOOR": 333,
-    "INDOOR_NORMAL": 176,
-    "INDOOR_QUIET": 158,
+    "INDOOR_QUIET": 236,
     "COVERED_DARK": 112,
     "UNDERGROUND": 85
   },

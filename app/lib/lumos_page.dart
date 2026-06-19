@@ -60,7 +60,9 @@ class _LumosPageState extends State<LumosPage> {
         actions: [
           IconButton(
             icon: Icon(_showTelemetry ? Icons.home_outlined : Icons.bar_chart),
-            tooltip: _showTelemetry ? 'Show classification' : 'Show spectral data',
+            tooltip: _showTelemetry
+                ? 'Show classification'
+                : 'Show spectral data',
             onPressed: () => setState(() => _showTelemetry = !_showTelemetry),
           ),
         ],
@@ -114,7 +116,7 @@ class _ClassificationView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      color: env.color.withOpacity(0.12),
+      color: env.color.withValues(alpha: 0.12),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -162,8 +164,10 @@ class _TelemetryView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Live spectral channels',
-              style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            'Live spectral channels',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
           const SizedBox(height: 6),
           Text(
             'Class: ${packet.classLabel}  ·  '
@@ -186,9 +190,11 @@ class _TelemetryView extends StatelessWidget {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Text(label,
-                            style: const TextStyle(fontSize: 8),
-                            textAlign: TextAlign.center),
+                        Text(
+                          label,
+                          style: const TextStyle(fontSize: 8),
+                          textAlign: TextAlign.center,
+                        ),
                         const SizedBox(height: 2),
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 250),
@@ -201,9 +207,11 @@ class _TelemetryView extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(names[i],
-                            style: const TextStyle(fontSize: 9),
-                            textAlign: TextAlign.center),
+                        Text(
+                          names[i],
+                          style: const TextStyle(fontSize: 9),
+                          textAlign: TextAlign.center,
+                        ),
                       ],
                     ),
                   ),

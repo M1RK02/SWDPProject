@@ -91,26 +91,26 @@ class _ConnectionPageState extends State<ConnectionPage> {
   // Asks for the right permissions per platform.
   // iOS needs only Bluetooth. Android also needs Location for BLE scanning.
   void _askPermissions() async {
-  if (Platform.isIOS) {
-    // iOS: flutter_reactive_ble handles the Bluetooth permission itself
-    // when scanForDevices is called. permission_handler is not needed.
-    setState(() => permGranted = true);
-    if (!scanning) _startScan();
-    return;
-  }
+    if (Platform.isIOS) {
+      // iOS: flutter_reactive_ble handles the Bluetooth permission itself
+      // when scanForDevices is called. permission_handler is not needed.
+      setState(() => permGranted = true);
+      if (!scanning) _startScan();
+      return;
+    }
 
-  // Android: explicitly request scan, connect, and location
-  final statuses = await [
-    Permission.bluetoothScan,
-    Permission.bluetoothConnect,
-    Permission.locationWhenInUse,
-  ].request();
+    // Android: explicitly request scan, connect, and location
+    final statuses = await [
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.locationWhenInUse,
+    ].request();
 
-  debugPrint("Permission statuses: $statuses");
-  final ok = statuses.values.every((s) => s.isGranted);
-  setState(() => permGranted = ok);
+    debugPrint("Permission statuses: $statuses");
+    final ok = statuses.values.every((s) => s.isGranted);
+    setState(() => permGranted = ok);
 
-  if (ok && !scanning) _startScan();
+    if (ok && !scanning) _startScan();
   }
 
   // --- Scan Logic ---
@@ -137,7 +137,8 @@ class _ConnectionPageState extends State<ConnectionPage> {
           .listen(
             (device) {
               debugPrint(
-                  "Found: ${device.name.isEmpty ? '(unnamed)' : device.name}");
+                "Found: ${device.name.isEmpty ? '(unnamed)' : device.name}",
+              );
               if (foundBleDevices.every((element) => element.id != device.id)) {
                 foundBleDevices.add(device);
                 if (device.name.contains(bleDeviceNameFilter)) {
@@ -186,13 +187,10 @@ class _ConnectionPageState extends State<ConnectionPage> {
           switch (event.connectionState) {
             case DeviceConnectionState.connecting:
               connectingProcedure(id);
-              break;
             case DeviceConnectionState.connected:
               connectionProcedure(id, event);
-              break;
             case DeviceConnectionState.disconnected:
               disconnectionProcedure(id);
-              break;
             default:
           }
           refreshScreen();
@@ -200,9 +198,9 @@ class _ConnectionPageState extends State<ConnectionPage> {
         onError: (Object error) {
           connecting = false;
           connected = false;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Connection failed!")),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text("Connection failed!")));
           debugPrint("ERROR during connection: $error \n");
           _startScan();
           refreshScreen();
@@ -258,7 +256,8 @@ class _ConnectionPageState extends State<ConnectionPage> {
                 _packetBuffer.removeRange(0, _kPacketLen);
                 incomingBLEStream.setNum(data);
                 debugPrint(
-                    "Valid packet (type: ${String.fromCharCode(data[1])}, class: ${data[2]})");
+                  "Valid packet (type: ${String.fromCharCode(data[1])}, class: ${data[2]})",
+                );
               } else {
                 // False start: '{' wasn't a real header, drop it and resync
                 _packetBuffer.removeAt(0);
@@ -285,9 +284,9 @@ class _ConnectionPageState extends State<ConnectionPage> {
     });
 
     // --- 3. Navigation ---
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Connected!")),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Connected!")));
 
     Navigator.push(
       context,
@@ -299,13 +298,13 @@ class _ConnectionPageState extends State<ConnectionPage> {
 
   void disconnectionProcedure(String id) {
     if (connected) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Disconnected!")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Disconnected!")));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Not connected!")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Not connected!")));
     }
     connected = false;
     connecting = false;
@@ -321,9 +320,9 @@ class _ConnectionPageState extends State<ConnectionPage> {
       _rxSubscription = null;
       connection.cancel();
       _packetBuffer.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Disconnected!")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Disconnected!")));
       _startScan();
       setState(() {
         connected = false;
@@ -338,9 +337,7 @@ class _ConnectionPageState extends State<ConnectionPage> {
 
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => LumosPage(stream: _demoStream!),
-      ),
+      MaterialPageRoute(builder: (context) => LumosPage(stream: _demoStream!)),
     ).whenComplete(() {
       _demoTimer?.cancel();
       _demoTimer = null;
@@ -359,11 +356,16 @@ class _ConnectionPageState extends State<ConnectionPage> {
       pkt[1] = 0x4C; // 'L'
       pkt[2] = label;
       final channels = [
-        (base * 0.3).toInt(), (base * 0.5).toInt(),
-        (base * 0.7).toInt(), (base * 0.9).toInt(),
-        (base * 1.0).toInt(), (base * 0.8).toInt(),
-        (base * 0.6).toInt(), (base * 0.4).toInt(),
-        base, (base * 0.2).toInt(),
+        (base * 0.3).toInt(),
+        (base * 0.5).toInt(),
+        (base * 0.7).toInt(),
+        (base * 0.9).toInt(),
+        (base * 1.0).toInt(),
+        (base * 0.8).toInt(),
+        (base * 0.6).toInt(),
+        (base * 0.4).toInt(),
+        base,
+        (base * 0.2).toInt(),
       ];
       for (int i = 0; i < 10; i++) {
         final v = channels[i].clamp(0, 65535);
@@ -418,7 +420,8 @@ class _ConnectionPageState extends State<ConnectionPage> {
                         },
                         subtitle: Text(foundBleDevicesFiltered[index].id),
                         title: Text(
-                            "$index: ${foundBleDevicesFiltered[index].name}"),
+                          "$index: ${foundBleDevicesFiltered[index].name}",
+                        ),
                       ),
                     ),
                   ),
