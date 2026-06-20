@@ -1,0 +1,5 @@
+Removed Pin From Net: NetName=MCU_I/O_3 Pin=U1-4
+Removed Pin From Net: NetName=MCU_I/O_4 Pin=U2-2
+Added Member To Class: ClassName=Lumos_Probe Member=Component C1 0402YC104JAT4A
+Added Member To Class: ClassName=Lumos_Probe Member=Component C2 0402YD105KAT4A
+Added Member To Class: ClassName=Lumos_Probe Member=Component C3 0402YC104JAT4A

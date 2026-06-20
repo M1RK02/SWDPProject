@@ -1,0 +1,11 @@
+Output: Generates pick and place files
+Type  : Pick Place
+From  : Variant [[No Variations]] of PCB Document [Lumos_Probe.PcbDoc]
+   Generated File[Pick Place for Lumos_Probe.txt]
+   Generated File[Pick Place for Lumos_Probe.csv]
+
+
+Files Generated   : 2
+Documents Printed : 0
+
+Finished Output Generation At 12:27:10 On 18/06/2026

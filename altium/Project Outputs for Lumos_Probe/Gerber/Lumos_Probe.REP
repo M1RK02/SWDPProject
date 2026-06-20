@@ -1,0 +1,189 @@
+*************************************************************
+FileName = Lumos_Probe.GBR
+AutoAperture = True
+*************************************************************
+Generating : Sensors
+      File : Lumos_Probe.GTL
+
+    Adding Layer      : Sensors
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D13
+    D14
+    D22
+    D23
+    D24
+    D25
+    D26
+    D27
+    D28
+*************************************************************
+
+*************************************************************
+Generating : Power
+      File : Lumos_Probe.G2
+
+    Adding Layer      : Power
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D27
+    D28
+*************************************************************
+
+*************************************************************
+Generating : Bottom Paste
+      File : Lumos_Probe.GBP
+
+    Adding Layer      : Bottom Paste
+
+    Adding Layer      : Probe connector
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D29
+    D30
+    D31
+*************************************************************
+
+*************************************************************
+Generating : Probe connector
+      File : Lumos_Probe.GBL
+
+    Adding Layer      : Probe connector
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D25
+    D26
+    D27
+    D28
+    D29
+    D30
+    D31
+*************************************************************
+
+*************************************************************
+Generating : Top Paste
+      File : Lumos_Probe.GTP
+
+    Adding Layer      : Top Paste
+
+    Adding Layer      : Sensors
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D13
+    D14
+*************************************************************
+
+*************************************************************
+Generating : Ground
+      File : Lumos_Probe.G1
+
+    Adding Layer      : Ground
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D27
+    D28
+*************************************************************
+
+*************************************************************
+Generating : Board
+      File : Lumos_Probe.GM1
+
+    Adding Layer      : Board
+
+
+Used DCodes :
+    D35
+*************************************************************
+
+*************************************************************
+Generating : Top Overlay
+      File : Lumos_Probe.GTO
+
+    Adding Layer      : Top Overlay
+
+
+Used DCodes :
+    D10
+    D11
+    D12
+*************************************************************
+
+*************************************************************
+Generating : Bottom Overlay
+      File : Lumos_Probe.GBO
+
+    Adding Layer      : Bottom Overlay
+
+
+Used DCodes :
+    D35
+    D36
+*************************************************************
+
+*************************************************************
+Generating : Top Solder
+      File : Lumos_Probe.GTS
+
+    Adding Layer      : Top Solder
+
+    Adding Layer      : Sensors
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D15
+    D16
+    D17
+    D18
+    D19
+    D20
+    D21
+*************************************************************
+
+*************************************************************
+Generating : Bottom Solder
+      File : Lumos_Probe.GBS
+
+    Adding Layer      : Bottom Solder
+
+    Adding Layer      : Probe connector
+
+    Adding Layer      : Multi-Layer
+
+
+Used DCodes :
+    D20
+    D21
+    D32
+    D33
+    D34
+*************************************************************
+
+*************************************************************
+Generating : Profile
+      File : Lumos_Probe.GM
+
+
+Used DCodes :
+    D37
+*************************************************************
+

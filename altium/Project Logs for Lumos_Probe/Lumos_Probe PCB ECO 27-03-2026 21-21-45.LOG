@@ -1,0 +1,4 @@
+Removed Pin From Net: NetName=MCU_I/O_1 Pin=R3-1
+Removed Pin From Net: NetName=1V8 Pin=R3-2
+Added Pin To Net: NetName=1V8 Pin=R3-1
+Added Pin To Net: NetName=MCU_I/O_1 Pin=R3-2

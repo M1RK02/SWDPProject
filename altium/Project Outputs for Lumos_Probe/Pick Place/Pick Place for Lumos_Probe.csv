@@ -1,0 +1,22 @@
+Altium Designer Pick and Place Locations
+C:\Users\jaime\Documents\POLIMI\2026-1\SMART WEARABLE DESIGN AND PROTOTYPING\PROJECT\Lumos_Probe4_GND_PWR_Plane\Project Outputs for Lumos_Probe\Pick Place\Pick Place for Lumos_Probe.csv
+
+========================================================================================================================
+File Design Information:
+
+Date:       18/06/26
+Time:       12:27
+Revision:   Not in VersionControl
+Variant:    No variations
+Units used: mil
+
+"Designator","Comment","Layer","Footprint","Center-X(mil)","Center-Y(mil)","Rotation","Description"
+"U2","IMP34DT05","TopLayer","HCLGA_3X4X1_STM","475.000","218.000","0","MEMS audio sensor omnidirectional digital microphone for industrial applications"
+"U1","AS7341-DLGT","TopLayer","PSON80P310X200X110-8N","220.157","198.543","0","Optical Sensor Ambient - I²C 8-TFLGA"
+"R3","CR0201-JW-472GLF","TopLayer","Chip2PinSM127P600-8N","258.189","380.000","0","Fixed Resistor, Metal Glaze/thick Film, 0.05W, 4700ohm, 30V, 5% +/-Tol, 200ppm/Cel, Surface Mount, 0201"
+"R2","CR0201-JW-472GLF","TopLayer","Chip2PinSM127P600-8N","333.189","320.000","0","Fixed Resistor, Metal Glaze/thick Film, 0.05W, 4700ohm, 30V, 5% +/-Tol, 200ppm/Cel, Surface Mount, 0201"
+"R1","CR0201-JW-472GLF","TopLayer","Chip2PinSM127P600-8N","258.189","420.000","0","Fixed Resistor, Metal Glaze/thick Film, 0.05W, 4700ohm, 30V, 5% +/-Tol, 200ppm/Cel, Surface Mount, 0201"
+"CONN1","BM29B0.6-24DS/2-0.35V(51)","BottomLayer","BM29B0.6-24DS_2-0.35V(51)-Footprint-1","337.559","176.732","90","Connector Receptacle 26 Pos (24+2) SMD"
+"C3","0402YC104JAT4A","TopLayer","Chip2PinSM127P600-8N","428.189","370.000","0","Ceramic Capacitor, Multilayer, Ceramic, 16V, 5% +Tol, 5% -Tol, X7R, 15% TC, 0.1uF, Surface Mount, 0402"
+"C2","0402YD105KAT4A","TopLayer","Chip2PinSM127P600-8N","428.189","420.000","0","Ceramic Capacitor, Multilayer, Ceramic, 16V, 10% +Tol, 10% -Tol, X5R, 15% TC, 1uF, Surface Mount, 0402"
+"C1","0402YC104JAT4A","TopLayer","Chip2PinSM127P600-8N","258.189","320.000","0","Ceramic Capacitor, Multilayer, Ceramic, 16V, 5% +Tol, 5% -Tol, X7R, 15% TC, 0.1uF, Surface Mount, 0402"
