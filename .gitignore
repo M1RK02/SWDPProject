@@ -78,3 +78,7 @@ pipeline/ENV/
 # Jupyter Notebook checkpoints and state
 pipeline/.ipynb_checkpoints/
 .ipynb_checkpoints/
+
+# Pipeline data
+pipeline/data/*.wav
+pipeline/data/*.csv
