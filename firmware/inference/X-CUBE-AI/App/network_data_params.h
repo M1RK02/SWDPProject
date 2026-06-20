@@ -2,7 +2,7 @@
   ******************************************************************************
   * @file    network_data_params.h
   * @author  AST Embedded Analytics Research Platform
-  * @date    2026-06-19T11:52:22+0200
+  * @date    2026-06-20T13:42:21+0200
   * @brief   AI Tool Automatic Code Generator for Embedded NN computing
   ******************************************************************************
   * Copyright (c) 2026 STMicroelectronics.
@@ -36,10 +36,10 @@
 
 
 #define AI_NETWORK_DATA_WEIGHTS_SIZES \
-  { 2116, }
-#define AI_NETWORK_DATA_WEIGHTS_SIZE         (2116)
+  { 2052, }
+#define AI_NETWORK_DATA_WEIGHTS_SIZE         (2052)
 #define AI_NETWORK_DATA_WEIGHTS_COUNT        (1)
-#define AI_NETWORK_DATA_WEIGHT_1_SIZE        (2116)
+#define AI_NETWORK_DATA_WEIGHT_1_SIZE        (2052)
 
 
 

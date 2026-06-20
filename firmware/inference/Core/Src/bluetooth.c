@@ -64,7 +64,7 @@ void BLE_Initialize(void) {
     enter_command_mode();
 
     // Set the device name for easy identification
-    uint8_t device_name[] = "SN,BLE_SW\r";
+    uint8_t device_name[] = "SN,BLE_A8\r";
     BLE_SendData(device_name, sizeof(device_name) - 1);
     HAL_UART_Receive(&huart3, command_ok_response, sizeof(command_ok_response), UART_TIMEOUT); // Read 'AOK' response
 
@@ -257,6 +257,38 @@ void BLE_SendPacket(BLE_DataType ble_data_type, uint8_t* data_buffer) {
 
     // Send the complete packet over UART
     BLE_SendData(ble_packet, sizeof(ble_packet));
+}
+
+/**
+ * @brief Sends the LUMOS environment classification packet over BLE.
+ *
+ * Packet format: { | 'L' | class | f1,f2,f3,f4,f5,f6,f7,f8,clear,nir (10 x uint16 LE) | }
+ * Total length: 24 bytes.
+ *
+ * @param class_label  Winning class index from the inference model (0-4).
+ * @param spectral     Pointer to the latest spectral reading.
+ */
+void BLE_SendLumosPacket(uint8_t class_label, AS7341_SpectralData_t *spectral) {
+    uint8_t pkt[LUMOS_PACKET_LENGTH];
+
+    pkt[0] = '{';
+    pkt[1] = 'L';
+    pkt[2] = class_label;
+
+    pkt[3]  = spectral->f1    & 0xFF;  pkt[4]  = spectral->f1    >> 8;
+    pkt[5]  = spectral->f2    & 0xFF;  pkt[6]  = spectral->f2    >> 8;
+    pkt[7]  = spectral->f3    & 0xFF;  pkt[8]  = spectral->f3    >> 8;
+    pkt[9]  = spectral->f4    & 0xFF;  pkt[10] = spectral->f4    >> 8;
+    pkt[11] = spectral->f5    & 0xFF;  pkt[12] = spectral->f5    >> 8;
+    pkt[13] = spectral->f6    & 0xFF;  pkt[14] = spectral->f6    >> 8;
+    pkt[15] = spectral->f7    & 0xFF;  pkt[16] = spectral->f7    >> 8;
+    pkt[17] = spectral->f8    & 0xFF;  pkt[18] = spectral->f8    >> 8;
+    pkt[19] = spectral->clear & 0xFF;  pkt[20] = spectral->clear >> 8;
+    pkt[21] = spectral->nir   & 0xFF;  pkt[22] = spectral->nir   >> 8;
+
+    pkt[23] = '}';
+
+    BLE_SendData(pkt, sizeof(pkt));
 }
 
 // --- Helper Function Implementations ---

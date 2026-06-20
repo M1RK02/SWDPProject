@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-#include "main.h"
+#include "stm32u5xx_hal.h"  /* for I2C_HandleTypeDef; avoid including main.h to prevent a circular include with bluetooth.h */
 #include <stdint.h>
 #include <stdbool.h>
 

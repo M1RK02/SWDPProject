@@ -205,11 +205,14 @@ int main(void)
   MX_SPI3_Init();
   MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
+  BLE_Initialize();
   MX_USB_Device_Init();
   HAL_Delay(1000);
 
   // Initialize X-CUBE-AI model platform
   AI_Init();
+
+  
 
   // Inizializzazione Spettrometro AS7341 (Updated layout matching main_datalogger.c)
   if (AS7341_Init(&h_as7341, &hi2c3, 99, 599, AS7341_GAIN_8X, true) != AS7341_OK) {
@@ -259,17 +262,22 @@ if (inference_ready_flag)
 
         // --- 🎯 NEW: Format and print predictions via USB VCP ---
         char usb_tx_buffer[128];
-        const char* class_labels[5] = {
+        
+        /*
+        const char* class_labels[6] = {
             "UNDERGROUND", 
             "OUTDOOR", 
             "INDOOR_QUIET", 
             "INDOOR_NORMAL", 
-            "COVERED_DARK"
+            "COVERED_DARK",
+            "UNKNOWN"
         };
+        */
 
         // Convert the raw int8 logit [-128, 127] to a generic relative confidence score [0, 255]
         uint16_t relative_score = (uint16_t)(max_probability + 128);
 
+        /*
         snprintf(usb_tx_buffer, sizeof(usb_tx_buffer), 
                  "[INFERENCE] Winner: %s (Raw Value: %d, Rel Score: %u/255)\r\n", 
                  class_labels[winning_class_idx], 
@@ -278,6 +286,10 @@ if (inference_ready_flag)
 
         // Transmit out the pipeline results
         CDC_Transmit_FS((uint8_t*)usb_tx_buffer, strlen(usb_tx_buffer));
+        */
+
+        //SEND PACKET THERE
+        BLE_SendLumosPacket((uint8_t)winning_class_idx, &spectral_data_buffer);
 
         // Act on the winning index based on hardware LEDs as before:
         switch (winning_class_idx) {
@@ -927,9 +939,9 @@ void Ingest_Block_To_Sliding_Window(int16_t* raw_audio_source) {
         Apply_Normalization(nn_input_features_float);
         
         // Quantize the float features to int8 for the quantized model input
-        // Using scale 0.046300698071718216f and zero-point -60
+        // Using scale 0.04727328568696976f and zero-point -73
         for (int i = 0; i < AI_NETWORK_IN_1_SIZE; i++) {
-            float q_val = roundf(nn_input_features_float[i] / 0.046300698071718216f) - 60.0f;
+            float q_val = roundf(nn_input_features_float[i] / 0.04727328568696976f) - 73.0f;
             if (q_val < -128.0f) q_val = -128.0f;
             if (q_val > 127.0f) q_val = 127.0f;
             nn_input_features[i] = (int8_t)q_val;

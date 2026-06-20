@@ -11,12 +11,14 @@
 
 #include "stdio.h"
 #include "stdint.h"
+#include "as7341.h"
 
 // --- Constants Definitions ---
 // These are standard values used for the BLE communication packets and timeouts.
 #define PACKET_LENGTH 20    // Maximum length of a data packet
 #define TEXT_LENGTH 500     // Maximum length for text strings
 #define UART_TIMEOUT 1000   // Timeout in milliseconds for UART operations
+#define LUMOS_PACKET_LENGTH 24   // { + type + class + 10x uint16 (20 bytes) + }
 
 // --- Enumerations ---
 // This enum defines the possible types of data packets that can be sent.
@@ -37,5 +39,6 @@ void BLE_SetSlowAdvertisements(void);
 void BLE_SendData(uint8_t* data, uint8_t data_length);
 void BLE_ReceiveData(uint8_t* data, uint8_t data_length);
 void BLE_SendPacket(BLE_DataType ble_data_type, uint8_t* data_buffer);
+void BLE_SendLumosPacket(uint8_t class_label, AS7341_SpectralData_t *spectral);
 
 #endif /* INC_BLUETOOTH_H_ */

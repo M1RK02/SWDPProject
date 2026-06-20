@@ -17,7 +17,7 @@
       "mpool_id": 1,
       "name": "gemm_0_bias_array",
       "nbits": 32,
-      "offset_start": 1312,
+      "offset_start": 1248,
       "qmn": {},
       "shape": [
         32
@@ -45,7 +45,7 @@
           -128
         ],
         "scales": [
-          0.03823912516236305
+          0.029607992619276047
         ]
       },
       "is_param": false,
@@ -79,12 +79,12 @@
       "mpool_id": 0,
       "name": "gemm_0_scratch0_array",
       "nbits": 16,
-      "offset_start": 56,
+      "offset_start": 96,
       "qmn": {},
       "shape": [
         1,
         1,
-        201,
+        199,
         1
       ],
       "shape_map": [
@@ -93,7 +93,7 @@
         "CH",
         "CH_IN"
       ],
-      "size_bytes": 402
+      "size_bytes": 398
     },
     {
       "alignment": 4,
@@ -144,38 +144,38 @@
           0
         ],
         "scales": [
-          0.0028899770695716143,
-          0.0043831453658640385,
-          0.003576163202524185,
-          0.004292784258723259,
-          0.0031270673498511314,
-          0.0032352881971746683,
-          0.0049410173669457436,
-          0.003274438437074423,
-          0.004225642886012793,
-          0.0037260036915540695,
-          0.0023871606681495905,
-          0.005860034376382828,
-          0.00480503449216485,
-          0.002873627934604883,
-          0.004141222685575485,
-          0.0031149473506957293,
-          0.003334758337587118,
-          0.0039838869124650955,
-          0.002557911444455385,
-          0.0029895503539592028,
-          0.0044974517077207565,
-          0.002965508960187435,
-          0.003996496554464102,
-          0.0031934569124132395,
-          0.0037276572547852993,
-          0.0026502804830670357,
-          0.002778381109237671,
-          0.002760274102911353,
-          0.00309183681383729,
-          0.003054229076951742,
-          0.003680148394778371,
-          0.0031969714909791946
+          0.00411871587857604,
+          0.003218745579943061,
+          0.003372491104528308,
+          0.00413495535030961,
+          0.003111422760412097,
+          0.005295551847666502,
+          0.005102112423628569,
+          0.004706471227109432,
+          0.0030966829508543015,
+          0.0036462177522480488,
+          0.0034630291629582644,
+          0.0072391452267766,
+          0.005376835353672504,
+          0.002621071645990014,
+          0.003811771282926202,
+          0.004855334758758545,
+          0.004253465682268143,
+          0.0027561846654862165,
+          0.003683016635477543,
+          0.0039841774851083755,
+          0.004485820420086384,
+          0.00287143443711102,
+          0.0038876815233379602,
+          0.002837061882019043,
+          0.0038506565615534782,
+          0.0033313396852463484,
+          0.004106817301362753,
+          0.0033012875355780125,
+          0.004581796936690807,
+          0.004110503010451794,
+          0.0030980478040874004,
+          0.0034874710254371166
         ]
       },
       "is_param": true,
@@ -186,13 +186,13 @@
       "qmn": {},
       "shape": [
         32,
-        41
+        39
       ],
       "shape_map": [
         "CH",
         "CH_IN"
       ],
-      "size_bytes": 1312
+      "size_bytes": 1248
     },
     {
       "alignment": 4,
@@ -211,7 +211,7 @@
       "mpool_id": 1,
       "name": "gemm_1_bias_array",
       "nbits": 32,
-      "offset_start": 1952,
+      "offset_start": 1888,
       "qmn": {},
       "shape": [
         16
@@ -239,7 +239,7 @@
           -128
         ],
         "scales": [
-          0.06201864033937454
+          0.050086118280887604
         ]
       },
       "is_param": false,
@@ -322,29 +322,29 @@
           0
         ],
         "scales": [
-          0.0037445195484906435,
-          0.004228183999657631,
-          0.0027133214753121138,
-          0.00576263852417469,
-          0.004975157789885998,
-          0.005039417650550604,
-          0.004146298859268427,
-          0.005317314527928829,
-          0.005805381573736668,
-          0.0038355980068445206,
-          0.00490655517205596,
-          0.004241569433361292,
-          0.0034758897963911295,
-          0.006357419770210981,
-          0.003297572024166584,
-          0.005020328797399998
+          0.003522120416164398,
+          0.004843354225158691,
+          0.005079732742160559,
+          0.004413246642798185,
+          0.00432343315333128,
+          0.003625888843089342,
+          0.004080692306160927,
+          0.004845513496547937,
+          0.005587973166257143,
+          0.00391752552241087,
+          0.005806101951748133,
+          0.005317358300089836,
+          0.004474015440791845,
+          0.005542456172406673,
+          0.004375732038170099,
+          0.005024010315537453
         ]
       },
       "is_param": true,
       "mpool_id": 1,
       "name": "gemm_1_weights_array",
       "nbits": 8,
-      "offset_start": 1440,
+      "offset_start": 1376,
       "qmn": {},
       "shape": [
         16,
@@ -373,7 +373,7 @@
       "mpool_id": 1,
       "name": "gemm_2_bias_array",
       "nbits": 32,
-      "offset_start": 2096,
+      "offset_start": 2032,
       "qmn": {},
       "shape": [
         5
@@ -401,7 +401,7 @@
           -7
         ],
         "scales": [
-          0.19727042317390442
+          0.1385403275489807
         ]
       },
       "is_param": false,
@@ -435,7 +435,7 @@
       "mpool_id": 0,
       "name": "gemm_2_scratch0_array",
       "nbits": 16,
-      "offset_start": 24,
+      "offset_start": 412,
       "qmn": {},
       "shape": [
         1,
@@ -473,18 +473,18 @@
           0
         ],
         "scales": [
-          0.006645146291702986,
-          0.007503092288970947,
-          0.007428260054439306,
-          0.007115543819963932,
-          0.007242771331220865
+          0.00577702559530735,
+          0.00701612513512373,
+          0.007952924817800522,
+          0.008135993033647537,
+          0.006403173319995403
         ]
       },
       "is_param": true,
       "mpool_id": 1,
       "name": "gemm_2_weights_array",
       "nbits": 8,
-      "offset_start": 2016,
+      "offset_start": 1952,
       "qmn": {},
       "shape": [
         5,
@@ -579,67 +579,67 @@
       "intq": {
         "axis": 0,
         "offsets": [
-          -60
+          -73
         ],
         "scales": [
-          0.046300698071718216
+          0.04727328568696976
         ]
       },
       "is_param": false,
       "mpool_id": 0,
       "name": "serving_default_context_features0_output_array",
       "nbits": 8,
-      "offset_start": 460,
+      "offset_start": 56,
       "qmn": {},
       "shape": [
-        41
+        39
       ],
       "shape_map": [
         "CH"
       ],
-      "size_bytes": 41
+      "size_bytes": 39
     }
   ],
   "environment": {
     "generated_model": {
-      "generated_time": "2026-06-19T11:52:22+0200",
+      "generated_time": "2026-06-20T13:42:21+0200",
       "model_files": [
         {
           "name": "network_data_params.h",
-          "signature": "0xc99add197ce83ef50ad33ff7da6f513e"
+          "signature": "0xc4aeae6e5a929a6824e9b0dc073d279e"
         },
         {
           "name": "network_data_params.c",
-          "signature": "0x8c9d56753f53b0addef437bdeb340f64"
+          "signature": "0xafcf3bc1975dbd2978f40912220db1ab"
         },
         {
           "name": "network_data.h",
-          "signature": "0x1197f480014ce0b2854d26534e29e32c"
+          "signature": "0xa130603af481999dbcc059699d546034"
         },
         {
           "name": "network_data.c",
-          "signature": "0x2f0dd6c0c4c65467948ee6177e1a7a41"
+          "signature": "0x3424e579c1d4e74491b12f1ec8c1b048"
         },
         {
           "name": "network_config.h",
-          "signature": "0x3ebc3eab4d5966fe84ca3cda93dc4178"
+          "signature": "0x5ef9be5757f740fa7c46a0748ec0c4ae"
         },
         {
           "name": "network.h",
-          "signature": "0x58c1a47c74a242bbad194e63ed217cbe"
+          "signature": "0x430572fd5839763b7d3eb2a217255365"
         },
         {
           "name": "network.c",
-          "signature": "0xb31e6c812d83bb0fe44f6b2b5df1e86c"
+          "signature": "0x2250ffe9656da70907fe8471da13e723"
         }
       ],
       "name": "network"
     },
-    "network_signature": "0xa405b778cb7775f4",
+    "network_signature": "0xafec2f888b7ecade",
     "test_name": "",
     "tools": [
       {
-        "arguments": "generate --target stm32u5 --name network -m /Users/mirko/Developer/SWDPProject/pipeline/output/tinyml_context_model/tinyml_context_model_int8.tflite --compression none --verbosity 1 --workspace /var/folders/p8/f0ql1fmx0yqbsmkfmx969hpm0000gn/T/mxAI_workspace1173958446954115630467622773220006 --output /Users/mirko/.stm32cubemx/network_output",
+        "arguments": "generate --target stm32u5 --name network -m /Users/mirko/Developer/SWDPProject/pipeline/output/tinyml_context_model/tinyml_context_model_int8.tflite --compression none --verbosity 1 --workspace /var/folders/p8/f0ql1fmx0yqbsmkfmx969hpm0000gn/T/mxAI_workspace5420615538825018364976019708772690 --output /Users/mirko/.stm32cubemx/network_output",
         "environment": [
           "STATS_TYPE=X-CUBE-AI"
         ],
@@ -647,12 +647,12 @@
           "model_files": [
             {
               "name": "tinyml_context_model_int8.tflite",
-              "signature": "0xa85de2179d744b6fd5aee99c598fa18f"
+              "signature": "0xfb1f29fca073fbca82a6088063c10405"
             }
           ],
-          "n_params": 1957,
+          "n_params": 1893,
           "name": "tinyml_context_model_int8",
-          "size": 2116,
+          "size": 2052,
           "type": "tflite"
         },
         "name": "ST.EdgeAI.Core",
@@ -724,7 +724,7 @@
             103,
             106
           ],
-          "macc": 1344,
+          "macc": 1280,
           "mapping": "NODE_SW",
           "name": "gemm_0",
           "original_nodes": [
@@ -805,7 +805,7 @@
             "nonlinearity": "softmax",
             "orig_axis": "-1",
             "param_fmt": "(SIGNED, 32 bit, C Size: 32 bits)",
-            "params": "[1694540032, 24, -124]"
+            "params": "[1190052352, 24, -124]"
           },
           "description": "Nonlinearity",
           "id": 14,
@@ -836,18 +836,18 @@
           "data_format": {
             "quantizer": "UNIFORM",
             "scale": [
-              0.046300698071718216
+              0.04727328568696976
             ],
             "size": 8,
             "type": "SIGNED",
             "zero": [
-              -60
+              -73
             ]
           },
           "name": "serving_default_context_features0",
           "shape": [
             1,
-            41
+            39
           ],
           "shape_map": [
             "BATCH",
@@ -898,7 +898,7 @@
     "toolchain": null,
     "toolchain_flash": null,
     "toolchain_ram": null,
-    "weights": 2116
+    "weights": 2052
   },
   "memory_pools": [
     {
@@ -954,7 +954,7 @@
       "rights": "ACC_READ",
       "size_bytes": -1,
       "subpools": [],
-      "used_size_bytes": 2116,
+      "used_size_bytes": 2052,
       "user_allocated": false,
       "virtual": false
     }
