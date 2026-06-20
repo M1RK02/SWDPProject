@@ -289,7 +289,7 @@ if (inference_ready_flag)
         */
 
         //SEND PACKET THERE
-        BLE_SendLumosPacket((uint8_t)winning_class_idx, &spectral_data_buffer);
+        BLE_SendLumosPacket((uint8_t)winning_class_idx, spectro_window_history[WINDOW_PACKET_COUNT-1]);
 
         // Act on the winning index based on hardware LEDs as before:
         switch (winning_class_idx) {

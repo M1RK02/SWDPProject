@@ -266,25 +266,25 @@ void BLE_SendPacket(BLE_DataType ble_data_type, uint8_t* data_buffer) {
  * Total length: 24 bytes.
  *
  * @param class_label  Winning class index from the inference model (0-4).
- * @param spectral     Pointer to the latest spectral reading.
+ * @param spectral_arr     Pointer to the latest spectral reading.
  */
-void BLE_SendLumosPacket(uint8_t class_label, AS7341_SpectralData_t *spectral) {
+void BLE_SendLumosPacket(uint8_t class_label, uint16_t *spectral_arr) {
     uint8_t pkt[LUMOS_PACKET_LENGTH];
 
     pkt[0] = '{';
     pkt[1] = 'L';
     pkt[2] = class_label;
 
-    pkt[3]  = spectral->f1    & 0xFF;  pkt[4]  = spectral->f1    >> 8;
-    pkt[5]  = spectral->f2    & 0xFF;  pkt[6]  = spectral->f2    >> 8;
-    pkt[7]  = spectral->f3    & 0xFF;  pkt[8]  = spectral->f3    >> 8;
-    pkt[9]  = spectral->f4    & 0xFF;  pkt[10] = spectral->f4    >> 8;
-    pkt[11] = spectral->f5    & 0xFF;  pkt[12] = spectral->f5    >> 8;
-    pkt[13] = spectral->f6    & 0xFF;  pkt[14] = spectral->f6    >> 8;
-    pkt[15] = spectral->f7    & 0xFF;  pkt[16] = spectral->f7    >> 8;
-    pkt[17] = spectral->f8    & 0xFF;  pkt[18] = spectral->f8    >> 8;
-    pkt[19] = spectral->clear & 0xFF;  pkt[20] = spectral->clear >> 8;
-    pkt[21] = spectral->nir   & 0xFF;  pkt[22] = spectral->nir   >> 8;
+    pkt[3]  = spectral_arr[0] & 0xFF;  pkt[4]  = spectral_arr[0] >> 8; // f1
+    pkt[5]  = spectral_arr[1] & 0xFF;  pkt[6]  = spectral_arr[1] >> 8; // f2
+    pkt[7]  = spectral_arr[2] & 0xFF;  pkt[8]  = spectral_arr[2] >> 8; // f3
+    pkt[9]  = spectral_arr[3] & 0xFF;  pkt[10] = spectral_arr[3] >> 8; // f4
+    pkt[11] = spectral_arr[4] & 0xFF;  pkt[12] = spectral_arr[4] >> 8; // f5
+    pkt[13] = spectral_arr[5] & 0xFF;  pkt[14] = spectral_arr[5] >> 8; // f6
+    pkt[15] = spectral_arr[6] & 0xFF;  pkt[16] = spectral_arr[6] >> 8; // f7
+    pkt[17] = spectral_arr[7] & 0xFF;  pkt[18] = spectral_arr[7] >> 8; // f8
+    pkt[19] = spectral_arr[8] & 0xFF;  pkt[20] = spectral_arr[8] >> 8; // clear
+    pkt[21] = spectral_arr[9] & 0xFF;  pkt[22] = spectral_arr[9] >> 8; // nir
 
     pkt[23] = '}';
 

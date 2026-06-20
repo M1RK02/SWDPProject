@@ -11,7 +11,6 @@
 
 #include "stdio.h"
 #include "stdint.h"
-#include "as7341.h"
 
 // --- Constants Definitions ---
 // These are standard values used for the BLE communication packets and timeouts.
@@ -39,6 +38,6 @@ void BLE_SetSlowAdvertisements(void);
 void BLE_SendData(uint8_t* data, uint8_t data_length);
 void BLE_ReceiveData(uint8_t* data, uint8_t data_length);
 void BLE_SendPacket(BLE_DataType ble_data_type, uint8_t* data_buffer);
-void BLE_SendLumosPacket(uint8_t class_label, AS7341_SpectralData_t *spectral);
+void BLE_SendLumosPacket(uint8_t class_label, uint16_t *spectral_arr);
 
 #endif /* INC_BLUETOOTH_H_ */
