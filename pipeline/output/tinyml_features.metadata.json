@@ -42,9 +42,7 @@
     "flicker_sensor_off_fraction",
     "flicker_none_fraction",
     "flicker_100hz_fraction",
-    "flicker_120hz_fraction",
     "flicker_detected_fraction",
-    "flicker_unknown_fraction",
     "audio_rms",
     "audio_log_energy",
     "audio_abs_mean",
@@ -67,9 +65,9 @@
   "rows": 1460,
   "recordings": 14,
   "class_counts": {
-    "INDOOR_NORMAL": 412,
-    "INDOOR_QUIET": 337,
+    "INDOOR_NORMAL": 526,
     "OUTDOOR": 333,
+    "INDOOR_QUIET": 223,
     "COVERED_DARK": 212,
     "UNDERGROUND": 166
   },

@@ -24,7 +24,7 @@
 void Extract_Spectro_Features_Window(uint16_t spectro_hist[WINDOW_PACKET_COUNT][SPECTRAL_CHANNELS], float* feature_out_vec);
 
 /**
-  * @brief  Extracts 6 Flicker Features from the 9-packet on-chip tracker history.
+  * @brief  Extracts 4 Flicker Features from the 9-packet on-chip tracker history.
   */
 void Extract_Flicker_Features_Window(AS7341_Flicker_t* flicker_hist, uint32_t total_packets, float* feature_out_vec);
 
@@ -34,7 +34,7 @@ void Extract_Flicker_Features_Window(AS7341_Flicker_t* flicker_hist, uint32_t to
 void Extract_Audio_Features_Window(int16_t* audio_samples, uint32_t total_samples, float* feature_out_vec);
 
 /**
-  * @brief  Standardizes the full 41-element feature map before running the NN model.
+  * @brief  Standardizes the full 39-element feature map before running the NN model.
   */
 void Apply_Normalization(float* feature_vec);
 
