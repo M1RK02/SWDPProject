@@ -3,9 +3,9 @@ import re
 from pathlib import Path
 
 # Paths
-metadata_path = Path("/Users/mirko/Developer/SWDPProject/pipeline/output/tinyml_context_model/model_metadata.json")
-features_c_path = Path("/Users/mirko/Developer/SWDPProject/firmware/inference/Core/Src/features.c")
-main_c_path = Path("/Users/mirko/Developer/SWDPProject/firmware/inference/Core/Src/main.c")
+metadata_path = Path("./output/tinyml_context_model/model_metadata.json")
+features_c_path = Path("../firmware/inference/Core/Src/features.c")
+main_c_path = Path("../firmware/inference/Core/Src/main.c")
 
 if not metadata_path.exists():
     print(f"Error: metadata file not found at {metadata_path}. Run the notebook first.")
@@ -78,13 +78,6 @@ features_c_content = re.sub(
 features_c_content = re.sub(
     r"(static const float model_normalization_stds)\[\d+\]",
     f"\\1[{num_features}]",
-    features_c_content
-)
-
-# Update loop size dynamically in Apply_Normalization
-features_c_content = re.sub(
-    r"(for \(int i = 0; i < )\d+(; i\+\+\) \{)",
-    f"\\g<1>{num_features}\\g<2>",
     features_c_content
 )
 

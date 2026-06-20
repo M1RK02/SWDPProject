@@ -392,7 +392,7 @@ STMicroelectronics.FP-SNS-STAIOTCFT.1.0.0.IPParameters=MathOoLibCcCMSISJjDSPJjLi
 STMicroelectronics.FP-SNS-STAIOTCFT.1.0.0.MathOoLibCcCMSISJjDSPJjInclude=true
 STMicroelectronics.FP-SNS-STAIOTCFT.1.0.0.MathOoLibCcCMSISJjDSPJjLib=true
 STMicroelectronics.FP-SNS-STAIOTCFT.1.0.0_SwParameter=MathOoLibCcCMSISJjDSPJjLib\:true;MathOoLibCcCMSISJjDSPJjInclude\:true;
-STMicroelectronics.X-CUBE-AI.10.2.0.ActivationBufferSizeList=504
+STMicroelectronics.X-CUBE-AI.10.2.0.ActivationBufferSizeList=1000
 STMicroelectronics.X-CUBE-AI.10.2.0.ActivationBuffers=pool0
 STMicroelectronics.X-CUBE-AI.10.2.0.ActivationNames=pool0
 STMicroelectronics.X-CUBE-AI.10.2.0.ActivationSizes=AI_NETWORK_DATA_ACTIVATION_1_SIZE
@@ -413,7 +413,7 @@ STMicroelectronics.X-CUBE-AI.10.2.0.ModelKind-ff7e8d64f771db57aa293f2febb8b5f635
 STMicroelectronics.X-CUBE-AI.10.2.0.ModelMacc-ff7e8d64f771db57aa293f2febb8b5f635e844d5ac6076b4101a7b0ddd6fcaff=1968
 STMicroelectronics.X-CUBE-AI.10.2.0.ModelName-ff7e8d64f771db57aa293f2febb8b5f635e844d5ac6076b4101a7b0ddd6fcaff=network
 STMicroelectronics.X-CUBE-AI.10.2.0.ModelNameList=network
-STMicroelectronics.X-CUBE-AI.10.2.0.ModelRamOccupation-ff7e8d64f771db57aa293f2febb8b5f635e844d5ac6076b4101a7b0ddd6fcaff=504
+STMicroelectronics.X-CUBE-AI.10.2.0.ModelRamOccupation-ff7e8d64f771db57aa293f2febb8b5f635e844d5ac6076b4101a7b0ddd6fcaff=1000
 STMicroelectronics.X-CUBE-AI.10.2.0.ModelStructureFile-ff7e8d64f771db57aa293f2febb8b5f635e844d5ac6076b4101a7b0ddd6fcaff=/Users/mirko/Developer/SWDPProject/pipeline/output/tinyml_context_model/tinyml_context_model_int8.tflite
 STMicroelectronics.X-CUBE-AI.10.2.0.ModelType-ff7e8d64f771db57aa293f2febb8b5f635e844d5ac6076b4101a7b0ddd6fcaff=STM32Cube.AI MCU runtime
 STMicroelectronics.X-CUBE-AI.10.2.0.ReadyForCodeGeneration=true
