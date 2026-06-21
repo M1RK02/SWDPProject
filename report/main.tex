@@ -77,8 +77,8 @@
 
 \vspace{0.5cm}
 
-{\LARGE\bfseries SMART WEARABLES DESIGN \& PROTOTYPING\\[0.2cm] \par}
-{\LARGE\bfseries PROJECT REPORT\par}
+{\LARGE\bfseries Smart Wearables Design \& Prototyping\\[0.2cm] \par}
+{\LARGE\bfseries Project Report\par}
 
 \vspace{0.7cm}
 
@@ -91,7 +91,7 @@
 \normalsize Elena Dalle Nogare (308625) \\[0.17cm]
 \normalsize Christian Prendin (286194) \\[0.17cm]
 \normalsize Leonardo Grossi (280890) \\[0.17cm]
-\normalsize Jaime Iriarte (000000)
+\normalsize Jaime Iriarte (295459)
 \end{tabular}
 
 \vspace{0.5cm}
@@ -138,6 +138,8 @@ To achieve this, the project focuses on three core development objectives:
     \item \textbf{Wireless Synchronization:} Implementing a firmware state machine that transmits classified state flags via Bluetooth Low Energy (BLE) to trigger dynamic, context-aware UI features in a companion smartphone application.
 \end{enumerate}
 
+The complete open-source firmware, hardware design files, and mobile application source code are publicly hosted on GitHub at: \url{https://github.com/M1RK02/SWDPProject}.
+
 % =========================================================================
 % SECTION 3: HARDWARE DESIGN (Max 500 words + Figures)
 % =========================================================================
@@ -153,7 +155,7 @@ The custom LUMOS probe integrates two environmental sensors: the AS7341 multispe
 
 The electrical schematics of the probe are reported in Figures~\ref{fig:light_sensor_schematic}, \ref{fig:microphone_schematic}, and \ref{fig:connector_schematic}. The AS7341 multispectral sensor was interfaced through the I2C bus operating at 1.8~V with dedicated pull-up resistors, while the IMP34DT05TR microphone was connected through a PDM interface using dedicated clock and data lines. The probe was connected to the main board through a compact board-to-board connector optimized for wearable integration.
 
-The custom LUMOS probe hardware was implemented on a four-layer PCB stack-up using Altium Designer to improve signal integrity and power distribution, as shown in Figure 3. The probe stack-up consists of a top signal layer dedicated to sensors and routing, an internal ground plane, an internal power plane, and a bottom signal layer used for the probe connector and additional routing. Dedicated ground planes and local decoupling capacitors were used on the probe to reduce noise and improve the stability of both the analog and digital domains. The probe PCB routing was optimized to minimize board dimensions while maintaining accessibility for debugging and testing. Communication between peripherals and the microcontroller was implemented using multiple interfaces according to the sensor requirements. In particular, the multispectral sensor communicates through I2C, while the NAND memory uses SPI communication. The digital microphone was interfaced through a PDM audio connection.
+The custom LUMOS probe hardware was implemented on a four-layer PCB stack-up using Altium Designer to improve signal integrity and power distribution. The probe stack-up consists of a top signal layer dedicated to sensors and routing, an internal ground plane, an internal power plane, and a bottom signal layer used for the probe connector and additional routing. Dedicated ground planes and local decoupling capacitors were used on the probe to reduce noise and improve the stability of both the analog and digital domains. The probe PCB routing was optimized to minimize board dimensions while maintaining accessibility for debugging and testing. Communication between peripherals and the microcontroller was implemented using multiple interfaces according to the sensor requirements. In particular, the multispectral sensor communicates through I2C, while the NAND memory uses SPI communication. The digital microphone was interfaced through a PDM audio connection.
 
 To assess commercial viability, a production cost analysis was conducted for a small manufacturing batch of 125 units. The total estimated production cost per LUMOS probe is €8.8, broken down in Table~\ref{tab:bom_cost}.
 
@@ -187,7 +189,7 @@ PCBA Assembly & Automated SMT Placement           & 0.71 \\
 % SECTION 4: FIRMWARE AND SOFTWARE DEVELOPMENT (Max 500 words + Code)
 % =========================================================================
 \section{Firmware development}
-\noindent\textbf{Contributors:} Mirko Pica (65\%), Christian Prendin (10\%), Leonardo Grossi (25\%)
+\noindent\textbf{Contributors:} Mirko Pica (60\%), Christian Prendin (10\%), Leonardo Grossi (30\%)
 \vspace{0.1cm}
 
 The software ecosystem for the context-aware smart glasses is split into an embedded dual-firmware pipeline (on-chip logging and inference) and a python data processing framework.
@@ -199,10 +201,13 @@ The data collection firmware operates as an event-driven Finite State Machine on
 An offline Python utility handles data retrieval via USB Virtual COM Port (VCP). It communicates with the MCU state machine in download mode, parsing the raw data packets streamed from the NAND memory into organized structural arrays (Time, Light Channels, Raw Audio).
 
 \subsection{Python Script: TinyML Model Training}
-The training notebook extracts spectral descriptors and time-domain acoustic audio parameters. A lightweight Artificial Neural Network (ANN) model is built in TensorFlow/Keras to perform 5-class context classification. The pipeline applies pruning and post-training 8-bit integer quantization, exporting an optimized \texttt{.tflite} flatbuffer. We subsequently used the STM32Cube.AI (X-CUBE-AI) expansion pack to convert the TFLite flatbuffer model into optimized C code for embedded microcontroller execution.
+The training notebook extracts spectral descriptors and time-domain acoustic audio parameters. A lightweight Artificial Neural Network (ANN) model is built in TensorFlow/Keras to perform 5-class context classification. The pipeline applies post-training 8-bit integer quantization, exporting an optimized \texttt{.tflite} flatbuffer. We subsequently used the STM32Cube.AI (X-CUBE-AI) expansion pack to convert the TFLite flatbuffer model into optimized C code for embedded microcontroller execution.
+
+\subsection{TinyML Model and Quantization}
+The on-device classifier is a Multilayer Perceptron (MLP) neural network trained to classify the five environmental contexts. The network processes a 39-dimensional feature set containing light intensity, spectral ratios, darkness level, flicker frequency distribution, audio energy, silence ratio, zero-crossing rate, and frequency-band energy. The architecture consists of 39 input features, two hidden layers (32 and 16 neurons with ReLU activation), and a 5-class Softmax output layer. The model was optimized using post-training 8-bit integer quantization (INT8) and converted to C code via STM32Cube.AI for deployment on the STM32U575 microcontroller.
 
 \subsection{Embedded Inference Firmware Deployment}
-The deployment firmware drops logging tasks and integrates the TinyML runtime engine. Real-time audio and light sensor buffers are passed through on-chip feature extraction algorithms. The structured features are subsequently pushed to the local inference loop at fixed intervals to determine environment classification weights.
+The deployment firmware drops logging tasks, integrates the TinyML runtime engine, and implements low-power optimizations. To maximize battery life, the firmware was refactored to decouple high-priority hardware data ingestion from execution. Lightweight interrupt handlers (GPDMA and EXTI) only buffer incoming data and set atomic trigger flags, dispatching heavy feature extraction and network evaluation to the main thread. When idle, the CPU transitions into a low-power Wait-For-Interrupt (WFI) state via \texttt{HAL\_PWR\_EnterSLEEPMode()}, gating the core clock while peripherals continue autonomous DMA data collection in SRAM. A critical section using global interrupt masking is implemented during the state checks to prevent sleep-race conditions (lost wakeups).
 
 \subsection{Core Processing Implementation Code}
 The primary implementation algorithms spanning embedded acquisition, data retrieval, network compilation, edge inference, and application decoding are presented below:
@@ -263,30 +268,43 @@ tflite_quant_model = converter.convert()
 \end{lstlisting}
 
 \begin{lstlisting}[language=C, caption=On-Chip TinyML Inference Loop Execution]
+// ISR Context (Lightweight logging & flag dispatch)
 void Ingest_Block_To_Sliding_Window(int16_t* raw_audio_source) {
   memcpy(audio_window_history[write_ptr], raw_audio_source, BLOCK_AUDIO_SAMPLES * sizeof(int16_t));
   write_ptr = (write_ptr + 1) % WINDOW_PACKET_COUNT;
-  
   if (blocks_accumulated == WINDOW_PACKET_COUNT && stride_counter >= INFERENCE_STRIDE_PACKETS) {
     stride_counter = 0;
+    processing_write_ptr = write_ptr;
+    data_processing_requested = 1; // Dispatch to main thread context
+  }
+}
+
+// Thread Context (Main Loop Dispatcher)
+while (1) {
+  if (data_processing_requested) {
+    data_processing_requested = 0;
+    Reconstruct_Audio_Scratchpad(processing_write_ptr);
     Extract_Spectro_Features_Window(spectro_window_history, nn_input_features_float);
     Extract_Flicker_Features_Window(flicker_window_history, WINDOW_PACKET_COUNT, nn_input_features_float);
     Extract_Audio_Features_Window(audio_processing_scratchpad, TOTAL_WINDOW_SAMPLES, nn_input_features_float);
     Apply_Normalization(nn_input_features_float);
     
     for (int i = 0; i < AI_NETWORK_IN_1_SIZE; i++) {
-      float q_val = roundf(nn_input_features_float[i] / 0.04727328568696976f) - 73.0f;
+      float q_val = roundf(nn_input_features_float[i] / 0.0541030541062355f) - 71.0f;
       nn_input_features[i] = (int8_t)__SSAT((int32_t)q_val, 8);
     }
-    inference_ready_flag = 1;
+    
+    ai_network_run(network_instance, &ai_input[0], &ai_output[0]);
+    uint8_t winning_class_idx = Get_Max_Probability(nn_output_predictions);
+    BLE_SendLumosPacket(winning_class_idx, &spectral_data_buffer); // Transmit context
   }
-}
-// Main loop polling
-if (inference_ready_flag) {
-  inference_ready_flag = 0;
-  ai_network_run(network_instance, &ai_input[0], &ai_output[0]); // Run AI network
-  uint8_t winning_class_idx = Get_Max_Probability(nn_output_predictions);
-  BLE_SendLumosPacket(winning_class_idx, &spectral_data_buffer); // Transmit context
+
+  // Safe atomic Wait-For-Interrupt low-power entry
+  __disable_irq();
+  if (!data_processing_requested) {
+    HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
+  }
+  __enable_irq();
 }
 \end{lstlisting}
 
@@ -316,32 +334,30 @@ class PacketParser {
 % SECTION 5: OPTIONAL IMPROVEMENTS (Max 250 words + Figures)
 % =========================================================================
 \section{Optional improvements}
-\noindent\textbf{Contributors:} Leonardo Grossi (40\%), Christian Prendin (60\%)
+\noindent\textbf{Contributors:} Leonardo Grossi (20\%), Christian Prendin (80\%)
 \vspace{0.1cm}
 
-To enhance the smart glasses platform with consumer-oriented functionalities, a lightweight TinyML model and a companion mobile application were developed.
+To enhance the smart glasses platform with consumer-oriented functionalities, a companion mobile application was developed using Flutter. 
 
-The neural network performs environmental recognition directly on the glasses, using feature vectors extracted from 9 consecutive acquisition packets to reduce computational complexity and memory. The 39-dimensional feature set includes light intensity, spectral ratios, darkness level, flicker frequency distribution, audio energy, silence ratio, zero-crossing rate, and frequency-band energy. The classifier architecture consists of a multilayer perceptron with 39 input features, two hidden layers of 32 and 16 neurons, and a Softmax output layer corresponding to five environmental classes: Underground, Outdoor, Indoor Quiet, Indoor Normal, and Covered/Dark. The model was quantized to int8 and prepared for deployment on the STM32 microcontroller using X-CUBE-AI.
-
-The environmental classifications are transmitted via BLE to a companion smartphone application developed with Flutter. Starting from the default Flutter example template, the application was extended to include BLE integration, custom packet parsing, real-time telemetry graphing, and dynamic user interface state adaptation. Instead of streaming raw sensor data, the application receives compressed context tokens, which are processed in real time by a local state management provider to dynamically adapt the user interface according to the detected environment.
+The application establishes a BLE connection with the smart glasses, receiving the environmental classification packets in real time. Instead of streaming raw telemetry, the application decodes the 24-byte packet to retrieve the current environment class and spectral light levels. A local state management provider updates the mobile user interface dynamically based on the detected environment (e.g., triggering quiet UI states, dark theme transitions, or displaying real-time spectral channel charts as shown in Figure~\ref{fig:mobile_app_screens}).
 
 \begin{figure}[H]
     \centering
-    \begin{subfigure}[t]{0.31\linewidth}
+    \begin{subfigure}[t]{0.25\linewidth}
         \centering
         \includegraphics[width=\linewidth]{app_underground.PNG}
         \caption{Underground}
         \label{fig:app_underground}
     \end{subfigure}
     \hfill
-    \begin{subfigure}[t]{0.31\linewidth}
+    \begin{subfigure}[t]{0.25\linewidth}
         \centering
         \includegraphics[width=\linewidth]{app_outdoor.PNG}
         \caption{Outdoor}
         \label{fig:app_outdoor}
     \end{subfigure}
     \hfill
-    \begin{subfigure}[t]{0.31\linewidth}
+    \begin{subfigure}[t]{0.25\linewidth}
         \centering
         \includegraphics[width=\linewidth]{app_indoor_silent.PNG}
         \caption{Indoor Silent}
@@ -350,21 +366,21 @@ The environmental classifications are transmitted via BLE to a companion smartph
     
     \vspace{0.2cm}
     
-    \begin{subfigure}[t]{0.31\linewidth}
+    \begin{subfigure}[t]{0.25\linewidth}
         \centering
         \includegraphics[width=\linewidth]{app_indoor_noisy.PNG}
         \caption{Indoor Noisy}
         \label{fig:app_indoor_noisy}
     \end{subfigure}
     \hfill
-    \begin{subfigure}[t]{0.31\linewidth}
+    \begin{subfigure}[t]{0.25\linewidth}
         \centering
         \includegraphics[width=\linewidth]{app_full_dark.PNG}
         \caption{Full Dark}
         \label{fig:app_full_dark}
     \end{subfigure}
     \hfill
-    \begin{subfigure}[t]{0.31\linewidth}
+    \begin{subfigure}[t]{0.25\linewidth}
         \centering
         \includegraphics[width=\linewidth]{app_spectral_channels.PNG}
         \caption{Spectral Telemetry}
@@ -381,15 +397,40 @@ The environmental classifications are transmitted via BLE to a companion smartph
 \noindent\textbf{Contributors:} Mirko Pica (20\%), Elena Dalle Nogare (20\%), Christian Prendin (20\%), Leonardo Grossi (20\%), Jaime Iriarte (20\%)
 \vspace{0.1cm}
 
-The final integrated prototype successfully demonstrates real-time edge context classification using fused multimodal data streams. The trained 8-bit quantized Artificial Neural Network (ANN) achieved a macro $F_1$-score of 0.990 across the five target environments during validation testing, performing reliably within the strict memory constraints of the STM32U575 microcontroller. 
+The final integrated prototype demonstrates real-time edge context classification using fused multimodal data streams. The 8-bit quantized ANN achieves an accurcy of 0.9894 on the test set, with perfect recall in \texttt{Covered/Dark} and \texttt{Outdoor} contexts (Figure~\ref{fig:tinyml_confusion}). Localized acoustic similarities between the \texttt{Indoor Quiet} and \texttt{Indoor Normal} classes form the primary classification bottleneck. Due to the small validation dataset size, these accuracy figures are likely overoptimistic for unstructured real-world generalization.
 
-The corresponding classification confusion matrix is illustrated in Figure~\ref{fig:tinyml_confusion}. The system achieved its highest individual recall in isolating the "Covered/Dark" class (1.00) and the "Outdoor" class (1.00), owing to the distinct, wide-band spectral amplitude separation provided by the AS7341 multispectral light sensor. The primary analytical bottleneck emerged from localized acoustic similarities between the "Indoor Quiet" and "Indoor Normal" resting baselines. 
+\subsection{Low-Power Architecture and Power Analysis}
+To satisfy wearable power constraints, the STM32U575 firmware transitions to a decoupled, thread-mode execution model. The GPDMA and EXTI interrupts handle lightweight data buffering and set atomic request flags, offloading the heavy feature extraction and model execution to the main thread. 
 
-It is important to note that the training and validation dataset is relatively small, collected under restricted environmental conditions with a limited number of unique recording sessions. Consequently, the near-perfect accuracy and macro $F_1$-score (~99\%) obtained during validation are likely overoptimistic and do not represent the system's generalization performance in unstructured, real-world deployment scenarios.
+When idle, the CPU enters Wait-For-Interrupt (WFI) sleep mode, gating the core clock while MDF1 and GPDMA1 continue acquiring data autonomously in SRAM. A critical section via \texttt{\_\_disable\_irq()} prevents sleep-race conditions. 
+
+At a stride of 9 blocks, active processing runs for 60~ms every 3.43~seconds (1.75\% duty cycle). As shown in Table~\ref{tab:power_consumption}, this results in an average current draw of 2.08~mA, yielding an overall 88.2\% reduction in core current compared to continuous polling.
+
+\begin{table}[H]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcc}
+\toprule
+\textbf{Operating Mode} & \textbf{Core Current (mA)} & \textbf{Duty Cycle} \\
+\midrule
+\textbf{Continuous Polling (Active-Run)} & 17.60 & 100.00\% \\
+\midrule
+\textbf{Low-Power Decoupled (WFI):} & & \\
+- Active Processing (60~ms) & 17.60 & 1.75\% \\
+- Gated Idle (Sleep, 3.37~s) & 1.80 & 98.25\% \\
+- \textit{Weighted Average} & \textbf{2.08} & \textbf{100.00\%} \\
+\midrule
+\textbf{Overall Current Reduction} & \multicolumn{2}{c}{\textbf{88.2\% savings}} \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Power consumption comparison between continuous polling and the decoupled low-power firmware on the STM32U575 core.}
+\label{tab:power_consumption}
+\end{table}
 
 \subsection{Short Video Demonstration}
-A comprehensive 3-minute video demonstration showcasing the operational smart glasses hardware, local TinyML inference processing, and smartphone app synchronization is available at: \\
-\url{www.google.com}
+A video showcasing the product presentation and a real-world demonstration of the system is available at: \\
+\url{https://drive.google.com/file/d/1Fz-_SUomvlX33PrQWa65t8Bg3y2XQhtz/view}
 
 \begin{figure}[H]
     \centering
@@ -459,12 +500,33 @@ A comprehensive 3-minute video demonstration showcasing the operational smart gl
     \label{fig:lumos_schematics}
 \end{figure}
 
-% Figure 3: Stack-up Layering
+% Figure 3: Data Logger and Inference Pipelines
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{Layer Stack.png}
-    \caption{Four-layer PCB stack-up used for the LUMOS probe implementation.}
-    \label{fig:stackup}
+    \begin{subfigure}[b]{0.8\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{data_logger_pipeline_scheme.png}
+        \caption{}
+        \label{fig:data_logger_pipeline}
+    \end{subfigure}
+    \\
+    \vspace{0.4cm}
+    \begin{subfigure}[b]{0.8\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{inference_pipeline_scheme.png}
+        \caption{}
+        \label{fig:inference_pipeline}
+    \end{subfigure}
+    \caption{Functional system pipeline architectures: (a) Data logger acquisition and NAND flash streaming pipeline. (b) Edge TinyML inference pipeline utilizing GPDMA double buffering, asynchronous thread-mode feature calculation, and atomic WFI low-power sleep transitions.}
+    \label{fig:pipeline_schemes}
+\end{figure}
+
+% Figure 4: Neural Network Training Scheme
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{nn_pipeline_scheme.png}
+    \caption{Neural network feature collection, feature normalization, and classification pipeline.}
+    \label{fig:nn_pipeline_scheme}
 \end{figure}
 
 \end{document}

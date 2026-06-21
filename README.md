@@ -37,6 +37,7 @@ The project is structured into modular layers spanning hardware design, firmware
 │       └── inference.ioc            # STM32CubeMX inference setup profile
 ├── pipeline/                        # Python Data Engine & Machine Learning
 │   ├── data/                        # Local raw acquisition storage
+│   ├── output/                      # Output of the model training
 │   ├── download_data.py             # Tkinter GUI serial download utility
 │   ├── sync_normalization.py        # Automatic training parameter sync tool
 │   ├── data_analysis.ipynb          # Telemetry visualizer & feature profiling
@@ -52,6 +53,7 @@ The project is structured into modular layers spanning hardware design, firmware
 │   └── pubspec.yaml                 # Flutter dependencies and assets configurations
 └── report/                          # Documentation
     ├── main.tex                     # Technical project report in LaTeX
+    ├── report.pdf                   # Technical project report in PDF
     └── figures/                     # Report diagrams and PCB schematics
 ```
 
