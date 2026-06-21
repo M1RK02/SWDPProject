@@ -102,7 +102,8 @@ static int8_t nn_input_features[AI_NETWORK_IN_1_SIZE];
 // Temporary float array for feature extraction and normalization (Size: 41)
 static float nn_input_features_float[AI_NETWORK_IN_1_SIZE];
 
-static volatile uint8_t inference_ready_flag = 0;
+static volatile uint8_t data_processing_requested = 0;
+static volatile int processing_write_ptr = 0;
 
 // Spectrometer data structures (Synchronized with data_logger)
 AS7341_Handle_t h_as7341;
@@ -242,11 +243,42 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-if (inference_ready_flag)
+    if (data_processing_requested)
     {
-        inference_ready_flag = 0; 
+        data_processing_requested = 0;
 
-        // Runs your full 1-shot feature extraction and model execution
+        // --- Reconstruct Continuous Chronological Audio Vector ---
+        int current_slot = processing_write_ptr; // The oldest slot is exactly where write_ptr currently sits
+        for (int i = 0; i < WINDOW_PACKET_COUNT; i++) {
+            memcpy(&audio_processing_scratchpad[i * BLOCK_AUDIO_SAMPLES], 
+                   audio_window_history[current_slot], 
+                   BLOCK_AUDIO_SAMPLES * sizeof(int16_t));
+            current_slot = (current_slot + 1) % WINDOW_PACKET_COUNT;
+        }
+
+        // --- Feature Extraction from sliding windows ---
+        // Fills indices 0 to 16
+        Extract_Spectro_Features_Window(spectro_window_history, nn_input_features_float);
+        
+        // Fills indices 17 to 22 
+        Extract_Flicker_Features_Window(flicker_window_history, WINDOW_PACKET_COUNT, nn_input_features_float);
+        
+        // Fills indices 23 to 40
+        Extract_Audio_Features_Window(audio_processing_scratchpad, TOTAL_WINDOW_SAMPLES, nn_input_features_float);
+        
+        // Normalize the final combined vector
+        Apply_Normalization(nn_input_features_float);
+        
+        // Quantize the float features to int8 for the quantized model input
+        // Using scale 0.0541030541062355f and zero-point -71
+        for (int i = 0; i < AI_NETWORK_IN_1_SIZE; i++) {
+            float q_val = roundf(nn_input_features_float[i] / 0.0541030541062355f) - 71.0f;
+            if (q_val < -128.0f) q_val = -128.0f;
+            if (q_val > 127.0f) q_val = 127.0f;
+            nn_input_features[i] = (int8_t)q_val;
+        }
+
+        // Runs your full 1-shot model execution
         Run_Inference();
 
         // Find the maximum probability across all 5 classes
@@ -260,36 +292,9 @@ if (inference_ready_flag)
             }
         }
 
-        // --- 🎯 NEW: Format and print predictions via USB VCP ---
-        char usb_tx_buffer[128];
-        
-        /*
-        const char* class_labels[6] = {
-            "UNDERGROUND", 
-            "OUTDOOR", 
-            "INDOOR_QUIET", 
-            "INDOOR_NORMAL", 
-            "COVERED_DARK",
-            "UNKNOWN"
-        };
-        */
-
-        // Convert the raw int8 logit [-128, 127] to a generic relative confidence score [0, 255]
-        uint16_t relative_score = (uint16_t)(max_probability + 128);
-
-        /*
-        snprintf(usb_tx_buffer, sizeof(usb_tx_buffer), 
-                 "[INFERENCE] Winner: %s (Raw Value: %d, Rel Score: %u/255)\r\n", 
-                 class_labels[winning_class_idx], 
-                 max_probability, 
-                 relative_score);
-
-        // Transmit out the pipeline results
-        CDC_Transmit_FS((uint8_t*)usb_tx_buffer, strlen(usb_tx_buffer));
-        */
-
         //SEND PACKET THERE
-        BLE_SendLumosPacket((uint8_t)winning_class_idx, spectro_window_history[WINDOW_PACKET_COUNT-1]);
+        int latest_idx = (processing_write_ptr - 1 + WINDOW_PACKET_COUNT) % WINDOW_PACKET_COUNT;
+        BLE_SendLumosPacket((uint8_t)winning_class_idx, spectro_window_history[latest_idx]);
 
         // Act on the winning index based on hardware LEDs as before:
         switch (winning_class_idx) {
@@ -315,6 +320,14 @@ if (inference_ready_flag)
                 break;
         }
     }
+
+    // Critical Section: Sleep entry
+    __disable_irq();
+    if (!data_processing_requested)
+    {
+        HAL_PWR_EnterSLEEPMode(PWR_MAINREGULATOR_ON, PWR_SLEEPENTRY_WFI);
+    }
+    __enable_irq();
   }
   /* USER CODE END 3 */
 }
@@ -914,40 +927,8 @@ void Ingest_Block_To_Sliding_Window(int16_t* raw_audio_source) {
     // 2. Process window if buffer is fully primed and stride parameter is met
     if (blocks_accumulated == WINDOW_PACKET_COUNT && stride_counter >= INFERENCE_STRIDE_PACKETS) {
         stride_counter = 0; // Reset stride steps accumulator
-
-        // --- Reconstruct Continuous Chronological Audio Vector ---
-        int current_slot = write_ptr; // The oldest slot is exactly where write_ptr currently sits
-        for (int i = 0; i < WINDOW_PACKET_COUNT; i++) {
-            memcpy(&audio_processing_scratchpad[i * BLOCK_AUDIO_SAMPLES], 
-                   audio_window_history[current_slot], 
-                   BLOCK_AUDIO_SAMPLES * sizeof(int16_t));
-            current_slot = (current_slot + 1) % WINDOW_PACKET_COUNT;
-        }
-
-        // --- 🎯 FIXED: Unified Base Pointer Passing (No more manual pointer arithmetic offsets) ---
-        
-        // Fills indices 0 to 16
-        Extract_Spectro_Features_Window(spectro_window_history, nn_input_features_float);
-        
-        // Fills indices 17 to 22 
-        Extract_Flicker_Features_Window(flicker_window_history, WINDOW_PACKET_COUNT, nn_input_features_float);
-        
-        // Fills indices 23 to 40
-        Extract_Audio_Features_Window(audio_processing_scratchpad, TOTAL_WINDOW_SAMPLES, nn_input_features_float);
-        
-        // Normalize the final combined vector
-        Apply_Normalization(nn_input_features_float);
-        
-        // Quantize the float features to int8 for the quantized model input
-        // Using scale 0.0541030541062355f and zero-point -71
-        for (int i = 0; i < AI_NETWORK_IN_1_SIZE; i++) {
-            float q_val = roundf(nn_input_features_float[i] / 0.0541030541062355f) - 71.0f;
-            if (q_val < -128.0f) q_val = -128.0f;
-            if (q_val > 127.0f) q_val = 127.0f;
-            nn_input_features[i] = (int8_t)q_val;
-        }
-        
-        inference_ready_flag = 1;
+        processing_write_ptr = write_ptr;
+        data_processing_requested = 1;
     }
 }
 
