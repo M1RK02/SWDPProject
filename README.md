@@ -54,6 +54,7 @@ The project is structured into modular layers spanning hardware design, firmware
 └── report/                          # Documentation
     ├── main.tex                     # Technical project report in LaTeX
     ├── report.pdf                   # Technical project report in PDF
+    ├── LUMIA.mp4                    # Product presentation and demonstration video
     └── figures/                     # Report diagrams and PCB schematics
 ```
 
@@ -127,6 +128,12 @@ The companion Flutter app dynamically decodes this payload using a dedicated byt
    flutter run
    ```
 3. Turn on the smart glasses' BLE module, establish a connection via the app interface, and watch the UI transition dynamically as you change environmental environments.
+
+---
+
+## 🎥 Video Demonstration
+
+A short video showcasing the product presentation and a real-world demonstration of the system is available at: [report/LUMIA.mp4](report/LUMIA.mp4)
 
 ---
 
